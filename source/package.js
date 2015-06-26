@@ -1,0 +1,12 @@
+enyo.depends(
+	"OsmMap.js",
+	"$lib/layout",
+	"$lib/onyx",
+	"$lib/enyo-ilib",
+	"$lib/webos-lib",
+	"style",
+	"data",
+	"plugins",
+	"views",
+	"app.js"
+);

@@ -1,0 +1,19 @@
+.details {
+	width: 100%;
+	height: 100%;
+}
+
+.details-image {
+	-webkit-transition-property: all ease-out;
+	-webkit-transition-duration: 10s;
+	-webkit-transition-timing-function: linear;
+	//opacity: 0;
+	//scale: 2 !important;
+	//background-size: cover;
+}
+
+.details-image.active {
+	//opacity: 1;
+	//scale: 1 !important;
+	background-size: 200% 200%;
+}

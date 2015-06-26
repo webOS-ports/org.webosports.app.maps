@@ -1,0 +1,13 @@
+enyo.depends(
+	"EnyoPatches.js",
+	"ListItems/SearchListItem.js",
+	"ListItems/DirectListItem.js",
+	"LabeledItem.js",
+	"SettingsItem.js",
+	"webOSAccel.js",
+	"webOSCompass.js",
+	"W3CGeolocation.js",
+	"webOSGeolocation.js",
+	"Helper.js",
+	"Pullout.js"
+);
