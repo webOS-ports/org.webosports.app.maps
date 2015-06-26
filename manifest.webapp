@@ -1,0 +1,13 @@
+{
+  "name": "Google Maps",
+  "description": "Homebrew Google Maps Application",
+  "launch_path": "/deploy/",
+  "icons": {
+    "128": "/icon.png"
+  },
+  "developer": {
+    "name": "72ka",
+    "url": "http://www.webosnation.com"
+  },
+  "default_locale": "en"
+}

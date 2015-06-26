@@ -1,0 +1,699 @@
+/* item */
+.item {
+	color:black;
+	height: auto;
+	border-top: 1px solid grey;
+	padding: 12px 16px;
+	text-align: left;
+	min-height: 70px;
+}
+.item-selected {
+	background: #BFD0DB;
+}
+
+.item > * {
+	vertical-align: middle;
+	font-family: Roboto,Arial,sans-serif;
+}
+
+.item-icon {
+	width: 50px;
+	height: 50px;
+	float: right;
+}
+
+.item-address {
+	color: #999;
+	font-size: 12px;
+}
+
+.item-name {
+	font-size: 16px;
+	color: #333;
+	font-weight: bold;
+}
+
+.item-more {
+	width: 50px;
+	height: 50px;
+	float: right;
+	display: inline-block;
+}
+
+.item-distance {
+	font-size: 12px;
+	color: brown;
+	opacity: 0.8;
+}
+
+/* direct item */
+.direct-item {
+	color:black;
+	height: auto;
+	border-top: 1px solid grey;
+	padding: 12px 16px;
+	text-align: left;
+	font-size: 16px;
+}
+.direct-item-selected {
+	background: #226B9A;
+}
+
+.direct-item > * {
+	vertical-align: middle;
+}
+
+.direct-item-instructions {
+	width: 240px;
+}
+
+.direct-item-distance {
+	font-size: 12px;
+	color: #999;
+}
+
+.pop-name {
+	font-size: 16px;
+	color: white;
+}
+
+.direct-marker-popup {
+	margin: 0;
+	padding: 0;
+	width: 294px;
+}
+
+.direct-pop-instructions-container{
+	margin: 5px;
+	min-height: 85px;
+	display: table;
+}
+
+.vertical-align {
+	display:table-cell;
+	vertical-align: middle;
+}
+
+.direct-border {
+   position: relative;
+   border: 0px solid white;
+   padding: 8px;
+   border-radius: 10px;
+   display: inline-block;
+   width: 278px;
+}
+
+
+.direct-border:before {
+  content:"";
+  position: absolute;
+  top:3px;
+  bottom:3px;
+  left:3px;
+  right:3px;
+  border:3px solid white;
+  border-radius: 8px;
+}
+
+.marker-popup {
+	margin: 0;
+	width: 280px;
+	opacity: 0;
+	-webkit-transition: all 0.3s ease-in-out;
+	transition: all 0.3s ease-in-out;
+}
+
+.marker-popup-menu {
+	margin: 0;
+	width: 280px;
+	opacity: 0;
+	-webkit-transition: all 0.3s ease-in-out;
+	transition: all 0.3s ease-in-out;
+}
+
+.direct-button {
+		width: 80px;
+}
+
+.marker-popup-menu-item {
+	margin-left: 15px;
+}
+
+.marker-popup-menu-icon {
+	background-size: cover;
+	margin: 4px;
+	float: left;
+		
+}
+
+.item-rating {
+	font-size: 12px;
+	color: #e7711b;
+	display: inline-block;
+	margin-right: 5px;
+}
+
+.rating_bar {
+  width: 65px;
+  background: url('../../assets/star-grey.png') 0 0 repeat-x;
+}
+
+.rating_bar div {
+  height: 13px;
+  background: url('../../assets/star-orange.png') 0 0 repeat-x;
+}
+
+.rating-container {
+	display: inline-block;
+}
+
+.direction-img {
+	 background-size: 32px;
+}
+
+.enyo-googlemap {
+
+	-webkit-transform: translateZ(0);
+	width: 100%;
+	height: 100%;
+	bottom: 0px;
+	position: absolute;
+	z-Index: 2;
+	
+}
+
+/* Selects each image on map container from local assets */
+.enyo-googlemap > div > div img[src*="assets"] {
+
+}
+
+.enyo-street {	
+	width: 100%;
+	height: 100%;
+	position: absolute;
+	z-Index: 3;
+}
+
+.grabber-text {
+	font-size: 10px;
+	margin-left: 32px;
+	color: #999;
+}
+
+.header-button {
+	height: 35px;
+	width: 50px;
+	padding: 6px 12px;
+}
+
+.header-button > div {
+	background-size: 24px;
+}
+
+.directions-panel {
+	height: auto;
+}
+
+/* Status panel */
+.status-shadow {
+	background: black;
+	border-radius: 5px;
+	color: white;
+	font-size: 12px;
+	padding: 2px;
+	position: absolute;
+	bottom: 1px;
+	left: 50px;
+	text-align: center;
+	right: 50px;
+    margin: auto;
+	-webkit-transition-property: all ease-out;
+	-webkit-transition-duration: 0.3s;
+	-webkit-transition-timing-function: linear;
+	-webkit-transform: scale(0.7) translate(0px,30px);
+	transition-property: all ease-out;
+	transition-duration: 0.3s;
+	transition-timing-function: linear;
+	transform: scale(0.7) translate(0px,30px);
+	opacity: 0;
+	z-Index: 10000;
+}
+
+.status-shadow.active {
+	opacity: 0.7;
+	-webkit-transform: scale(1) translate(0px,0px);
+	transform: scale(1) translate(0px,0px);
+}
+
+.truncating-text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.wrap-text {
+	white-space: normal;
+}
+
+.toggleicon-in-fittable {
+	height: 32px !important;
+}
+
+/* Disable shadow of infowindow - issues on Touchpad */
+#map_canvas img[src*="iws3.png"] {
+    display: none;
+}
+
+.app {
+	overflow: hidden;
+}
+
+.toolbar-main {
+	height: auto;
+	width: 100%;
+	position: absolute;
+	z-Index: 3;
+}
+
+.menu {
+
+	height: 32px;
+	width: 64px;
+	float: right;
+	
+}
+
+.bottom-right-buttons {
+	position: absolute;
+	bottom: 1%;
+	right: 1%;
+	height: 96px;
+	width: 34px;
+	z-index: 20;
+	border-radius: 20px;
+	opacity: 0.9;
+}
+
+.bottom-left-buttons {
+	position: absolute;
+	bottom: 0px;
+	right: 0px;
+	z-index: 20;
+	border-top-left-radius: 10px;
+}
+
+.button-bottom {
+	float: left;
+}
+
+.pullout-menu {
+
+}
+
+.search-input: {
+
+	width: 100%;
+}
+
+.search-box {
+	height: 100%;
+}
+
+.buttons-box {
+	height: 100%;
+	width: auto;
+}
+
+.top-bar {
+	font-size: 12px;
+}
+.pullout {
+	position: absolute;
+	top: 0px;
+	right: 0px;
+	bottom: 0;
+	z-index: 40;
+	width: 320px;
+	background: #D8D8D8;
+}
+
+.pullout-shadow {
+	position: absolute;
+	height: 100%;
+	width: 20px;
+	left: -20px;
+	background: url(../../assets/sliding-shadow.png) repeat-y;
+	background-size: 20px 2px;
+}
+
+.pullout-grabbutton {
+	position: absolute;
+	bottom: 10px;
+	left: 12px;
+	border-radius: 10px 0 0 10px;
+}
+
+.pullout-toolbar {
+	padding-top: 3px;
+	text-align: center;
+	margin-bottom: -1px;
+}
+
+.pullout-toolbar button {
+
+	border-bottom-right-radius: 0px;
+	border-bottom-left-radius: 0px;
+}
+
+.pullout-toolbar button.active {
+	background-image: none;
+	background-color: #4c4c4c;
+}
+
+.settings {
+	padding: 0px 10px 5px 10px;
+	//margin-top: -2px;
+}
+
+.settings > * {
+	padding: 8px;
+	min-height: 30px;
+	line-height: 30px;
+}
+
+.settings > * > * {
+	display: inline-block;
+}
+
+.settings > .onyx-groupbox-header {
+	padding: 0 5px 0 5px;
+	border-radius: 0px 0px 0 0 !important;
+}
+
+.labeled-item-icon {
+	vertical-align: bottom;
+	padding-right: 5px;
+}
+
+.label-item-input {
+	float: right;
+}
+
+.settings-item-input {
+	float: right;
+}
+
+.bookmark-panel {
+	height: auto;
+}
+
+.bookmark-header {
+	text-align: center;
+	padding: 0px;
+}
+
+.bookmark-header .onyx-radiobutton{
+	width: 75px;
+	font-size: 14px;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.bookmark-scroller {
+	background: #D8D8D8;
+}
+
+.bookmark-item {
+	padding: 10px;
+}	
+
+.bookmark-item-title, .bookmark-item-details {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.bookmark-item-title {
+	margin-top: 10px;
+	font-size: 16px;
+}
+
+.bookmark-item-details {
+	font-size: 14px;
+	color: #606060;
+}
+
+.infobox {
+	position: absolute;
+	padding: 10px;
+	border-radius: 10px;
+	background-color: #4C4C4C;
+	color: #fff;
+	font-size: 18px;
+}
+
+.infobox-details {
+	font-size: 14px;
+}
+
+.lang-container {
+	display: inline-block;
+	vertical-align: middle;	
+}
+
+.lang-picker {
+	float: right;
+	width: 268px;
+	vertical-align: middle;
+}
+
+.settings-notice {
+	font-size: 12px;
+	color: #4C4C4C;
+	left: 20px;
+}
+
+.onyx-sample-divider {
+	color: #F49200;
+	text-transform: uppercase;
+	font-family: Segoe UI, Prelude Medium, Helvetica, Verdana, sans-serif;
+	font-size: 14px;
+	font-weight: bold;
+	margin-bottom: 8px;
+}
+
+.initpopup {
+	top: 0px;
+	font-size: 12px;
+	text-align: center;
+	width: 100%;
+	height: 100%;
+	background-color: black;
+	opacity: 0.9;
+	position: absolute;
+	z-Index: 10000;
+}
+
+.travel-radio button {
+	height: 32px;
+	padding: 0px 20px;
+}
+
+.travel-radio button > div {
+	height: 20px;
+	width: 20px;
+	background-size: cover;
+}
+
+.inheader-right {
+	float: right;
+}
+
+.inheader-left {
+	float: left;
+}
+
+
+/** All around autocompleter styling **/
+
+
+.pac-container {
+
+		margin: 22px 5px 20px 5px !important;
+		z-index: 3 !important; 
+		width: auto  !important;
+		min-width: 180px;
+		border-bottom-left-radius: 8px;
+		border-bottom-right-radius: 8px;
+		padding-left: 6px;
+		padding-right: 6px;
+		display: box;
+		max-width: 85%;
+		font-family: Roboto,Arial,sans-serif;
+				
+}
+
+.pac-container:after {
+    background-image: url("../../assets/powered-by-google-on-white2.png") !important;
+}
+
+.pac-container .pac-item {
+
+	font: 'Prelude', sans-serif !important;
+	font-size: 13px !important;
+	padding: 8px 0px 8px 0px;
+	line-height: 1.5em !important;
+	color: #555;
+	overflow: visible;
+	white-space: normal !important;
+}
+
+.pac-container .pac-item::first-line {
+
+    font-size: 16px !important;
+    
+}
+
+.pac-icon {
+	background-image: url("../../assets/autocomplete-icons.png") !important;
+}
+
+.pac-container .pac-item .pac-item-query .pac-matched {
+	
+}
+
+.pac-container .pac-item .pac-item-query {
+	font-size: 16px;
+}
+
+.pac-container .pac-item .pac-item-query:after {
+
+	content: '\a';
+    white-space: pre;
+
+}
+
+.keyboard {
+	zoom: 0.6;
+	width: 200%;
+	position: absolute;
+	z-Index: 4;
+	bottom: 0;
+	left: -50%;
+	text-align: center;
+	
+}
+
+/* Pre 3 css stuff (1.5 pixel ratio) */
+
+@media
+only screen and (-webkit-min-device-pixel-ratio: 1.5),
+only screen and (min-device-width : 480px) and (max-device-width : 800px){ 
+
+.zoom-pre3 {
+	zoom: 1.5;
+}
+
+.zoom-pre3-text {
+	font-size: 150% !important;
+}
+
+.pac-container {
+	zoom: 1.5;
+}
+
+}
+
+/* Compass */
+
+#needle {
+	height: 30px;
+	width: 30px;
+	-webkit-transform-origin: 50% 100%;
+	background:url(../../assets/compass-south.png) center center no-repeat;
+}
+
+#compass {
+	height: 30px;
+	width: 30px;
+	position: absolute;
+	z-Index:3;
+	margin-left:auto;
+	margin-right:auto;
+	opacity: 0;
+}
+
+/* Pulsating GPS dot */
+
+#pulse {
+	height: 50px;
+	width: 50px;
+	position: absolute;
+	z-Index:3;
+	opacity: 0;
+	-webkit-transition-property: opacity;
+	-webkit-animation: pulsation 0.5s linear;
+	-webkit-animation-iteration-count: 1;
+	-webkit-border-image: url(../../assets/pulse.png) 0 0 0 0 stretch stretch;
+	-webkit-box-sizing: border-box;
+	-webkit-transform-origin: 50% 50%;
+}
+
+@-webkit-keyframes "pulsation" {
+ 0% {
+	-webkit-transform: scale(0);
+	opacity: 0.0;
+ }
+ 25% {
+	-webkit-transform: scale(1);
+	opacity: 0.1;
+ }
+ 50% {
+	-webkit-transform: scale(2);
+	opacity: 0.3;
+ }
+ 75% {
+	-webkit-transform: scale(3);
+	opacity: 0.5;
+ }
+ 100% {
+	-webkit-transform: scale(4);
+	opacity: 0.0;
+ }
+}
+
+@media
+only screen and (device-pixel-ratio: 1.0),
+only screen and (min-width : 905px) {
+
+.inline-wide-screens {
+	display: none;
+}
+
+inline-wide-screens-not {
+	display: block;
+}
+
+}
+
+/* maneuvers - to be finished, it is not documented */
+
+.maneuver-icon {
+background-size: 100% 3600%;
+}
+.turn-sharp-left{ background: url(../../assets/maneuvers.png) 0px 0px ;	}
+.turn-sharp-right{ background: url(../../assets/maneuvers.png) 0px -2332px ; }
+.turn-left{	background: url(../../assets/maneuvers.png) 0px -1656px ;	}
+.turn-right{ background: url(../../assets/maneuvers.png) 0px -1932px ; }
+.turn-slight-left{ background: url(../../assets/maneuvers.png) 0px -1512px ; }
+.turn-slight-right{	background: url(../../assets/maneuvers.png) 0px -204px ; }
+.ramp-left{	background: url(../../assets/maneuvers.png) 0px -2392px ; }
+.ramp-right{ background: url(../../assets/maneuvers.png) 0px -1724px ; }
+.fork-left{	background: url(../../assets/maneuvers.png) 0px -2200px ; }
+.fork-right{ background: url(../../assets/maneuvers.png) 0px -1992px ; }
+.straight{ background: url(../../assets/maneuvers.png) 0px -2130px ; }
+.merge{ background: url(../../assets/maneuvers.png) 0px -568px ; }
+.roundabout-left{ background: url(../../assets/maneuvers.png) 0px -784px ; }
+.roundabout-right{ background: url(../../assets/maneuvers.png) 0px -924px ; }
+
