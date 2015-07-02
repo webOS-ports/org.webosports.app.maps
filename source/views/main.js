@@ -1296,7 +1296,7 @@ initCustomMapTypes: function () {
 			getTileUrl: function(coord, zoom) {
 				
 			/* This URL gets just transit lines on the transparent background */			 
-			return "http://mts0.googleapis.com/vt?lyrs=a,traffic|seconds_into_week:-1&x=" + coord.x + "&y=" + coord.y + "&z=" + zoom + "&style=1";
+			return "http://mts0.googleapis.com/vt?lyrs=h,traffic|seconds_into_week:-1&x=" + coord.x + "&y=" + coord.y + "&z=" + zoom + "&style=3";
 			/* style 15 - normalni styl
 			 * traffic|seconds.... doprava pro cr
 			 * style 2 - velke texty pro vyssi DPI */
