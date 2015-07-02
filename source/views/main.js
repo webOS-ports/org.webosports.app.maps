@@ -111,7 +111,6 @@ enyo.kind({
 			onShowTransit: "showTransit", 
 			onShowTraffic: "showTraffic", 
 			onShowBicycling: "showBicycling",
-			onShowWeather: "showWeather",
 			onMapTypeSelect: "mapTypeSelect",
 			onCacheOSM: "cacheOSM", 
 			onBookmarkSelect: "bookmarkSelect",
@@ -276,7 +275,6 @@ initAfterIdle: function() {
 	if (Prefs.layers.traffic) this.showTraffic(null, {value: true});
 	if (Prefs.layers.transit) this.showTransit(null, {value: true});
 	if (Prefs.layers.bike) this.showBicycling(null, {value: true});
-	if (Prefs.layers.weather) this.showWeather(null, {value: true});
 
 	/* init others */
 	this.setupDirectionService();
@@ -587,13 +585,6 @@ showTransit: function(inSender, inEvent) {
 showBicycling: function (inSender, inEvent){
 	bikeLayer.setMap(inEvent.value ? map : null);
 	Prefs.layers.bike = inEvent.value;
-	this.savePrefs();
-},
-showWeather: function(inSender, inEvent){
-	/* Weather layer is deprecated and should be removed soon */
-	weatherLayer.setMap(inEvent.value ? map : null);
-	cloudLayer.setMap(inEvent.value ? map : null);
-	Prefs.layers.weather = inEvent.value;
 	this.savePrefs();
 },
 findCurrentLocation: function() {

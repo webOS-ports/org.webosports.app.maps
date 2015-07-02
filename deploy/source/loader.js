@@ -14,8 +14,7 @@ var Prefs = {
 			layers: {
 				traffic: false,
 				transit: false,
-				bike: false,
-				weather: false
+				bike: false
 			},
 			lang: navigator.language,
 			GPSinterval: 5,
@@ -58,7 +57,7 @@ if (cookie) {
 function loadScript() {
   var script = document.createElement('script');
   script.type = 'text/javascript';
-  script.src = "http://maps.google.com/maps/api/js" + gAPI + "&libraries=places,weather,geometry&language=" + Prefs.lang + '&callback=initialize';
+  script.src = "http://maps.google.com/maps/api/js" + gAPI + "&libraries=places,geometry&language=" + Prefs.lang + '&callback=initialize';
   document.body.appendChild(script);
 }
 
@@ -68,8 +67,6 @@ function initialize() {
 			directionsService = new google.maps.DirectionsService();
 			trafficLayer = new google.maps.TrafficLayer();
 			transitLayer = new google.maps.TransitLayer();
-			weatherLayer = new google.maps.weather.WeatherLayer();
-			cloudLayer = new google.maps.weather.CloudLayer();
 			bikeLayer = new google.maps.BicyclingLayer();
 			geocoder = new google.maps.Geocoder();
 			currentPos = new google.maps.LatLng(37.39281, -122.04046199999999);
