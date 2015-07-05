@@ -162,7 +162,7 @@ create: function(){
 	this.haveCompass = false;
 	this.compassOpacity = 0;
 	/* Adaptation to Firefox/FirefoxOS */
-	this.transform = enyo.platform.platformName.contains("firefox") ? "" : "-webkit-";
+	this.transform = (enyo.platform.firefoxOS || enyo.platform.platformName === "firefox") ? "" : "-webkit-";
 	//this.transform = "-webkit-";
 	this.trackPosition = false;
 	
