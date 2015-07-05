@@ -8,7 +8,6 @@ enyo.kind({
 		onShowTraffic: "",
 		onShowTransit: "",
 		onShowBicycling: "",
-		onShowWeather: "",
 		onMapTypeSelect: "",
 		onCacheOSM: "",
 		onBookmarkSelect: "",
@@ -53,8 +52,7 @@ enyo.kind({
 						{kind: "onyx.GroupboxHeader", content: "Layers"},
 						{kind: "LabeledItem", label: $L("Traffic"), name: "trafficToggle", icon: "assets/icon-traffic.png", defaultKind: "onyx.ToggleButton", onChange: "showTrafficChange"},
 						{kind: "LabeledItem", label: $L("Transit"), name: "transitToggle", icon: "assets/icon-transit.png", defaultKind: "onyx.ToggleButton", onChange: "showTransitChange"},
-						{kind: "LabeledItem", label: $L("Bike"), name: "bikeToggle", icon: "assets/icon-bicycle.png", defaultKind: "onyx.ToggleButton", onChange: "showBicyclingChange"},
-						{kind: "LabeledItem", label: $L("Weather"), name: "weatherToggle", icon: "assets/icon-weather.png", defaultKind: "onyx.ToggleButton", onChange: "showWeatherChange"}
+						{kind: "LabeledItem", label: $L("Bike"), name: "bikeToggle", icon: "assets/icon-bicycle.png", defaultKind: "onyx.ToggleButton", onChange: "showBicyclingChange"}
 					]}
 				]},
 				{name: "bookmarkpanel", showing: false, classes: "bookmark-panel enyo-fit", components: [
@@ -384,8 +382,6 @@ enyo.kind({
 		this.$.transitToggle.inputChanged();
 		this.$.bikeToggle.checked = Prefs.layers.bike;
 		this.$.bikeToggle.inputChanged();
-		this.$.weatherToggle.checked = Prefs.layers.weather;
-		this.$.weatherToggle.inputChanged();
 		
 		//this.$.moreOptionsCollapsible.toggleOpen();
 
@@ -429,9 +425,6 @@ enyo.kind({
 	},
 	showTrafficChange: function(inSender) {
 		this.doShowTraffic({value: inSender.getValue()});
-	},
-	showWeatherChange: function(inSender) {
-		this.doShowWeather({value: inSender.getValue()});
 	},
 	showBicyclingChange: function(inSender) {
 		this.doShowBicycling({value: inSender.getValue()});

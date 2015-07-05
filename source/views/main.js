@@ -111,7 +111,6 @@ enyo.kind({
 			onShowTransit: "showTransit", 
 			onShowTraffic: "showTraffic", 
 			onShowBicycling: "showBicycling",
-			onShowWeather: "showWeather",
 			onMapTypeSelect: "mapTypeSelect",
 			onCacheOSM: "cacheOSM", 
 			onBookmarkSelect: "bookmarkSelect",
@@ -276,7 +275,6 @@ initAfterIdle: function() {
 	if (Prefs.layers.traffic) this.showTraffic(null, {value: true});
 	if (Prefs.layers.transit) this.showTransit(null, {value: true});
 	if (Prefs.layers.bike) this.showBicycling(null, {value: true});
-	if (Prefs.layers.weather) this.showWeather(null, {value: true});
 
 	/* init others */
 	this.setupDirectionService();
@@ -587,13 +585,6 @@ showTransit: function(inSender, inEvent) {
 showBicycling: function (inSender, inEvent){
 	bikeLayer.setMap(inEvent.value ? map : null);
 	Prefs.layers.bike = inEvent.value;
-	this.savePrefs();
-},
-showWeather: function(inSender, inEvent){
-	/* Weather layer is deprecated and should be removed soon */
-	weatherLayer.setMap(inEvent.value ? map : null);
-	cloudLayer.setMap(inEvent.value ? map : null);
-	Prefs.layers.weather = inEvent.value;
 	this.savePrefs();
 },
 findCurrentLocation: function() {
@@ -1296,7 +1287,7 @@ initCustomMapTypes: function () {
 			getTileUrl: function(coord, zoom) {
 				
 			/* This URL gets just transit lines on the transparent background */			 
-			return "http://mts0.googleapis.com/vt?lyrs=a,traffic|seconds_into_week:-1&x=" + coord.x + "&y=" + coord.y + "&z=" + zoom + "&style=1";
+			return "http://mts0.googleapis.com/vt?lyrs=h,traffic|seconds_into_week:-1&x=" + coord.x + "&y=" + coord.y + "&z=" + zoom + "&style=3";
 			/* style 15 - normalni styl
 			 * traffic|seconds.... doprava pro cr
 			 * style 2 - velke texty pro vyssi DPI */
