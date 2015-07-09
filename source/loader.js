@@ -57,7 +57,8 @@ if (cookie) {
 function loadScript() {
   var script = document.createElement('script');
   script.type = 'text/javascript';
-  script.src = "http://maps.google.com/maps/api/js" + gAPI + "&libraries=places,geometry&language=" + Prefs.lang + '&callback=initialize';
+  //script.src = "http://maps.google.com/maps/api/js" + gAPI + "&libraries=places,geometry&language=" + Prefs.lang + '&callback=initialize';
+   script.src = "https://maps.googleapis.com/maps/api/js" + gAPI + "&libraries=places,geometry&language=" + Prefs.lang + '&callback=initialize';
   document.body.appendChild(script);
 }
 

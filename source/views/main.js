@@ -198,8 +198,15 @@ cleanup: function () {
 	this.savePrefs();
 	
 	if(enyo.platform.webos) {
-		this.$.webOSCompass.stopTracking();
-		this.$.webOSAccel.stop();
+		try
+		{
+			this.$.webOSCompass.stopTracking();
+			this.$.webOSAccel.stop();
+		}
+		catch(err)
+		{
+			console.log("Error in WebOSCompass and/or WebOSAccel (probably because we're on Desktop): "+ err.message);	
+		}
 	};
 	
 	enyo.log("*** EXIT ***");
@@ -211,10 +218,17 @@ init: function(){
 	this.$.layout.rendered();
 	
 	if(enyo.platform.webos) {
+	try
+	{
 		window.PalmSystem.stageReady();
 		window.PalmSystem.setWindowOrientation("free");
 		/* Workaround the pixelRatio, because of Pre3 */
 		window.devicePixelRatio = window.innerWidth/this.$.mainPane.node.offsetWidth;	
+	}
+	catch (err)
+	{
+		console.log("Error in window.PalmSystem (probably because we're on Desktop): "+ err.message);
+	}
 	};
 
 	this.$.pullout.$.APIver.setContent("<span style='color: gray; font-size: 12px'>Google Maps API: v" + google.maps.version + "</span>");
@@ -241,19 +255,37 @@ initAfterIdle: function() {
 	/**  This function is called on first map idle  **/
 
 	if(enyo.platform.webos) {
+	try
+	{
 		window.PalmSystem.stageReady();
 		window.PalmSystem.setWindowOrientation("free");
+	}
+	catch(err)
+	{
+		console.log("Error in window.PalmSystem (probably because we're on Desktop): "+ err.message);
+	}
+	finally
+	{
 		this.compassContainer = document.createElement("div");
 		this.compassContainer.id = 'compass';
 		this.needleContainer = document.createElement("div");
 		this.needleContainer.id = 'needle';
-		this.$.webOSCompass.startTracking();
-		this.$.webOSAccel.start();
-		//this.$.webOSCompass.getCurrentHeading();
-		this.checkNavit(); 
+		try
+		{
+			this.$.webOSCompass.startTracking();
+			this.$.webOSAccel.start();
+			this.$.webOSCompass.getCurrentHeading();
+		}
+		catch(err)
+		{
+			console.log("Error in WebOSCompass and/or WebOSAccel (probably because we're on Desktop): "+ err.message);	
+		}
+		finally
+		{
+			this.checkNavit(); 
+		}
+	}
 	};
-	
-	
 	
 	/* DELETE !!!! */
 	//this.statusPanel(window.devicePixelRatio, 5);
