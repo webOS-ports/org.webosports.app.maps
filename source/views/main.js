@@ -620,10 +620,22 @@ showBicycling: function (inSender, inEvent){
 	this.savePrefs();
 },
 findCurrentLocation: function() {
-	this.$[this.locationMethod].getCurrentPosition();
+	try {
+		this.$[this.locationMethod].getCurrentPosition();
+	}
+	catch (err) {
+		console.log("Cannot use locationMethod (probably because we're on a Desktop)");
+	}
+	
 },
 startTracking: function() {
-	this.$[this.locationMethod].startTracking();
+	try {
+		this.$[this.locationMethod].startTracking();
+	}
+	catch (err) {
+		console.log("Cannot use locationMethod (probably because we're on a Desktop)");
+	}
+
 },
 goCurrentLocation: function (inSender, inEvent) {
 	
@@ -705,7 +717,13 @@ firstLocationSuccess: function(inSender, inData) {
 		
 	this.updateCompassPosition(currentPos);
 	
-	this.$[this.locationMethod].onSuccess = "trackingLocationSuccess";
+	try {
+		this.$[this.locationMethod].onSuccess = "trackingLocationSuccess";
+	}
+	catch (err) {
+		console.log("Cannot use locationMethod (probably because we're on a Desktop)");
+	}
+
 	
 	google.maps.event.addListener(this.myLocationMarker,"click",this.MarkerClick.bind(this, this.myLocationMarker));
 
@@ -1409,7 +1427,12 @@ isStreet: function (location) {
 updateGPS: function (inSender, inEvent) {
 	
 	var Timer = setTimeout((function(){
-		this.$[this.locationMethod].getCurrentPosition();
+		try {
+			this.$[this.locationMethod].getCurrentPosition();
+		}
+		catch (err) {
+			console.log("Cannot use locationMethod (probably because we're on a Desktop)");
+		}
 	 }).bind(this), Prefs.GPSinterval*1000);
 },
 
