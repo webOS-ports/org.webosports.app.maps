@@ -21,7 +21,7 @@ enyo.kind({
 						{kind: "onyx.ToggleIconButton", description: $L("origin"), classes: "toggleicon-in-fittable", name: "bookmarkA", src: "assets/menu-icon-bookmark.png", ontap: "bookmarkSelect"},
 						{name: "directionBoxA", showing: true, fit: true, kind: "onyx.InputDecorator", layoutKind: 'FittableColumnsLayout', components: [
 							//{kind: "onyx.Icon", classes: "direction-img", src: "assets/flagA.png"},
-							{name: "directionStart", what: "origin", selectOnFocus: true, fit: true, classes: "search-input", kind: "onyx.Input", placeholder: "Starting Location", onfocus: "bindAutocompleter"}
+							{name: "directionStart", what: "origin", selectOnFocus: true, fit: true, classes: "truncating-text search-input", kind: "onyx.Input", placeholder: "Starting Location", onfocus: "bindAutocompleter"}
 						]},
 						{kind:"onyx.Button", content: "Close", classes: "onyx-dark direct-button", ontap: "toggleSearchDirections"}
 					]},
@@ -30,7 +30,7 @@ enyo.kind({
 						{kind: "onyx.ToggleIconButton", description: $L("destination"), classes: "toggleicon-in-fittable", name: "bookmarkB", src: "assets/menu-icon-bookmark.png", ontap: "bookmarkSelect"},
 						{name: "directionBoxB", showing: true, fit: true, kind: "onyx.InputDecorator", layoutKind: 'FittableColumnsLayout', components: [
 							//{kind: "onyx.Icon", classes: "direction-img", src: "assets/flagB.png"},
-							{name: "directionEnd", what: "destination", selectOnFocus: true, fit: true, classes: "search-input", kind: "onyx.Input", placeholder: "Ending Location", onchange: "codeDirection", onfocus: "bindAutocompleter"}
+							{name: "directionEnd", what: "destination", selectOnFocus: true, fit: true, classes: "truncating-text search-input", kind: "onyx.Input", placeholder: "Ending Location", onchange: "codeDirection", onfocus: "bindAutocompleter"}
 							
 						]},
 						{kind:"onyx.Button", name: "getDirectButton", disabled: false, content: "Go", classes: "onyx-blue direct-button", ontap: "calcRoute"},
