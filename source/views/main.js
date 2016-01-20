@@ -769,6 +769,14 @@ gestureStart: function(inSender, e){
 	this.previousScale = e.scale;
 	this.previousS = 0;
 
+	if(typeof e.centerX == "undefined" || typeof e.centerY == "undefined") {
+		e.centerX = 0;
+		e.centerY = 0;
+		for(var t = 0; t < e.touches.length; ++t) {
+			e.centerX += e.touches[t].clientX / e.touches.length;
+			e.centerY += e.touches[t].clientY / e.touches.length;
+		}
+	}
 	this.oldeventg = e;
 	
 	this.TilesContainer = map.getDiv().firstChild.firstChild;
@@ -783,8 +791,12 @@ gestureStart: function(inSender, e){
 
 gestureChange: function(inSender, e){
 	
-		e.preventDefault();
-
+		try {
+			e.preventDefault();
+		}
+		catch(ex) {
+		}
+		
 		/* ToDo: map rotate upon gesture works... needs to be more tested */
 		//var rotation = 0;
 		
@@ -793,7 +805,16 @@ gestureChange: function(inSender, e){
 		//var rotate = "rotate3d(0,0,1," + rotation + "deg) ";
 		var rotate = "";
 
-		this.TilesContainer.style[this.transform + "transform"] = rotate + "scale3d(" + e.scale + "," + e.scale + ",0)" + " translate3d(" + (-this.oldeventg.centerX + e.centerX)/e.scale + "px," + (-this.oldeventg.centerY + e.centerY)/e.scale + "px, 0px)";
+		if(typeof e.centerX == "undefined" || typeof e.centerY == "undefined") {
+			e.centerX = 0;
+			e.centerY = 0;
+			for(var t = 0; t < e.touches.length; ++t) {
+				e.centerX += e.touches[t].clientX / e.touches.length;
+				e.centerY += e.touches[t].clientY / e.touches.length;
+			}
+		}
+		var transform = rotate + "scale3d(" + e.scale + "," + e.scale + ",1)" + " translate3d(" + (-this.oldeventg.centerX + e.centerX)/e.scale + "px," + (-this.oldeventg.centerY + e.centerY)/e.scale + "px, 0px)";
+		this.TilesContainer.style[this.transform + "transform"] = transform;
 
 		this.addpaneventg.cx = this.addpaneventg.oldcenter.x + (this.oldeventg.centerX - e.centerX);
 		this.addpaneventg.cy = this.addpaneventg.oldcenter.y + (this.oldeventg.centerY - e.centerY);
@@ -818,7 +839,6 @@ gestureChange: function(inSender, e){
 
 },
 gestureEnd: function(inSender, e){
-
 	map.setZoom(this.z);	
 	var point = new google.maps.Point(this.addpaneventg.cx, this.addpaneventg.cy);
 	map.setCenter(this.fromPixelToLatLng(point));
