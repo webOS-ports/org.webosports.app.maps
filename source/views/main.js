@@ -162,7 +162,7 @@ create: function(){
 	this.haveCompass = false;
 	this.compassOpacity = 0;
 	/* Adaptation to Firefox/FirefoxOS */
-	this.transform = ""; //(enyo.platform.firefoxOS || enyo.platform.platformName === "firefox") ? "" : "-webkit-";
+	this.transform = (enyo.platform.firefoxOS || enyo.platform.platformName === "firefox") ? "" : "-webkit-";
 	//this.transform = "-webkit-";
 	this.trackPosition = false;
 	
@@ -769,11 +769,13 @@ gestureStart: function(inSender, e){
 	this.previousScale = e.scale;
 	this.previousS = 0;
 
-	e.centerX = 0;
-	e.centerY = 0;
-	for(var t = 0; t < e.touches.length; ++t) {
-		e.centerX += e.touches[t].clientX / e.touches.length;
-		e.centerY += e.touches[t].clientY / e.touches.length;
+	if(typeof e.centerX == "undefined" || typeof e.centerY == "undefined") {
+		e.centerX = 0;
+		e.centerY = 0;
+		for(var t = 0; t < e.touches.length; ++t) {
+			e.centerX += e.touches[t].clientX / e.touches.length;
+			e.centerY += e.touches[t].clientY / e.touches.length;
+		}
 	}
 	this.oldeventg = e;
 	
@@ -803,11 +805,13 @@ gestureChange: function(inSender, e){
 		//var rotate = "rotate3d(0,0,1," + rotation + "deg) ";
 		var rotate = "";
 
-		e.centerX = 0;
-		e.centerY = 0;
-		for(var t = 0; t < e.touches.length; ++t) {
-			e.centerX += e.touches[t].clientX / e.touches.length;
-			e.centerY += e.touches[t].clientY / e.touches.length;
+		if(typeof e.centerX == "undefined" || typeof e.centerY == "undefined") {
+			e.centerX = 0;
+			e.centerY = 0;
+			for(var t = 0; t < e.touches.length; ++t) {
+				e.centerX += e.touches[t].clientX / e.touches.length;
+				e.centerY += e.touches[t].clientY / e.touches.length;
+			}
 		}
 		var transform = rotate + "scale3d(" + e.scale + "," + e.scale + ",1)" + " translate3d(" + (-this.oldeventg.centerX + e.centerX)/e.scale + "px," + (-this.oldeventg.centerY + e.centerY)/e.scale + "px, 0px)";
 		this.TilesContainer.style[this.transform + "transform"] = transform;
