@@ -763,9 +763,11 @@ gestureStart: function(inSender, e){
 	
 	new google.maps.event.addListenerOnce(map, 'bounds_changed', this.MapCenterChanged.bind(this));
 	
+	this.gestureinprogress = true;
 	this.GestureCenter = map.getCenter();	
 	this.Zooming = true;
 	this.previouszoom = map.getZoom();
+	this.z = this.previouszoom;
 	this.previousScale = e.scale;
 	this.previousS = 0;
 
@@ -791,11 +793,6 @@ gestureStart: function(inSender, e){
 
 gestureChange: function(inSender, e){
 	
-		try {
-			e.preventDefault();
-		}
-		catch(ex) {
-		}
 		
 		/* ToDo: map rotate upon gesture works... needs to be more tested */
 		//var rotation = 0;
@@ -816,6 +813,7 @@ gestureChange: function(inSender, e){
 		var transform = rotate + "scale3d(" + e.scale + "," + e.scale + ",1)" + " translate3d(" + (-this.oldeventg.centerX + e.centerX)/e.scale + "px," + (-this.oldeventg.centerY + e.centerY)/e.scale + "px, 0px)";
 		this.TilesContainer.style[this.transform + "transform"] = transform;
 
+		// New center position in pixels = starting pixel center of map (with the assumption it hasn't been resized) + (original touch center - current touch center)
 		this.addpaneventg.cx = this.addpaneventg.oldcenter.x + (this.oldeventg.centerX - e.centerX);
 		this.addpaneventg.cy = this.addpaneventg.oldcenter.y + (this.oldeventg.centerY - e.centerY);
 
@@ -839,31 +837,40 @@ gestureChange: function(inSender, e){
 
 },
 gestureEnd: function(inSender, e){
-	map.setZoom(this.z);	
+	this.gestureinprogress = false;
+	
+	map.setZoom(this.z);
+	
 	var point = new google.maps.Point(this.addpaneventg.cx, this.addpaneventg.cy);
-	map.setCenter(this.fromPixelToLatLng(point));
+	var latlng = this.fromPixelToLatLng(point);
+	map.setCenter(latlng);
+	
 },
 
 dragStart: function(inSender, inEvent) {
-
-	this.$.markerPopup.hide();
-
-	new google.maps.event.addListenerOnce(map, 'bounds_changed', this.MapCenterChanged.bind(this));
-
-	inEvent.preventDefault();
-
-	this.TilesContainer = map.getDiv().firstChild.firstChild;
-	this.TilesContainer.style.overflow = "visible";
-
-	this.oldcenter = this.fromLatLngToPixel(map.getCenter());
-	this.wasflicked = false;	
+	
+	if(!this.gestureinprogress) {
+		this.$.markerPopup.hide();
+	
+		new google.maps.event.addListenerOnce(map, 'bounds_changed', this.MapCenterChanged.bind(this));
+	
+		inEvent.preventDefault();
+	
+		this.TilesContainer = map.getDiv().firstChild.firstChild;
+		this.TilesContainer.style.overflow = "visible";
+	
+		this.oldcenter = this.fromLatLngToPixel(map.getCenter());
+		this.wasflicked = false;	
+	}
 	
 },
 
 dragging: function(inSender, inEvent) {
 
-	this.moveMapBy(inEvent.dx, inEvent.dy);
-	this.draggingEvent = inEvent;
+	if(!this.gestureinprogress) {
+		this.moveMapBy(inEvent.dx, inEvent.dy);
+		this.draggingEvent = inEvent;
+	}
 },
 
 moveMapBy: function(x,y,deg) {
@@ -874,7 +881,7 @@ moveMapBy: function(x,y,deg) {
 
 dragEnd: function(inSender, inEvent){
 	
-	if (!this.wasflicked) {
+	if (!this.wasflicked && !this.gestureinprogress) {
 		this.mapEndMove(inEvent);
 	};
 
@@ -882,28 +889,30 @@ dragEnd: function(inSender, inEvent){
 
 flick: function(inSender, inEvent) {
 
-	this.wasflicked = true;
+	if(!this.gestureinprogress) {
+		this.wasflicked = true;
+		
+		var transTime = Math.sqrt(inEvent.xVelocity*inEvent.xVelocity + inEvent.yVelocity*inEvent.yVelocity)*400;
 	
-	var transTime = Math.sqrt(inEvent.xVelocity*inEvent.xVelocity + inEvent.yVelocity*inEvent.yVelocity)*400;
-
-	inEvent.dx = this.draggingEvent.dx + Math.abs(this.draggingEvent.dx)*inEvent.xVelocity;
-	inEvent.dy = this.draggingEvent.dy + Math.abs(this.draggingEvent.dy)*inEvent.yVelocity;
+		inEvent.dx = this.draggingEvent.dx + Math.abs(this.draggingEvent.dx)*inEvent.xVelocity;
+		inEvent.dy = this.draggingEvent.dy + Math.abs(this.draggingEvent.dy)*inEvent.yVelocity;
+		
+		this.TilesContainer.style[this.transform + "transition"] = this.transform + "transform " + transTime/1000 + "s ease-out";
 	
-	this.TilesContainer.style[this.transform + "transition"] = this.transform + "transform " + transTime/1000 + "s ease-out";
-
-	this.moveMapBy(inEvent.dx, inEvent.dy);
+		this.moveMapBy(inEvent.dx, inEvent.dy);
+		
+		var timer = setTimeout(function(){
 	
-	var timer = setTimeout(function(){
-
-			this.mapEndMove(inEvent);
-
-	}.bind(this), transTime);
+				this.mapEndMove(inEvent);
+	
+		}.bind(this), transTime);
+	}
 
 
 },
 
 mapEndMove: function(inEvent) {
-
+	
 	var point = new google.maps.Point(this.oldcenter.x-inEvent.dx, this.oldcenter.y-inEvent.dy);
 	this.residuePos = inEvent;
 
