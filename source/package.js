@@ -1,7 +1,7 @@
 enyo.depends(
 	"OsmMap.js",
 	"$lib/layout",
-	"$lib/onyx",
+	"$lib/onyx/source",
 	"$lib/enyo-ilib",
 	"$lib/webos-lib",
 	"style",
