@@ -1,4 +1,5 @@
 enyo.depends(
 	"maps.css",
-	"details.css"
+	"details.css",
+	"Theme.less"
 );
