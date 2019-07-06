@@ -1,4 +1,4 @@
-var gAPI = "?v=3"; //default Google API
+var gAPI = "?key=AIzaSyBSTvlMEfLkRzgdZbqhv7PsA2MulWjgYNs&v=3"; //default Google API
 var map;
 var geocoder;
 var elevator;

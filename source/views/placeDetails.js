@@ -150,7 +150,7 @@ setPlaceDetails: function(place) {
 			if (status == "OK") {
 				
 				/* Get an StreetView image */
-				url = "https://maps.googleapis.com/maps/api/streetview?size=" + window.innerWidth + "x" + Math.round(window.innerHeight/3) + "&location=" + place.geometry.location.lat() + "," +  place.geometry.location.lng() + "&heading=235";
+				url = "https://maps.googleapis.com/maps/api/streetview?key=AIzaSyBSTvlMEfLkRzgdZbqhv7PsA2MulWjgYNs&size=" + window.innerWidth + "x" + Math.round(window.innerHeight/3) + "&location=" + place.geometry.location.lat() + "," +  place.geometry.location.lng() + "&heading=235";
 				this.$.PlaceDetailsImage.applyStyle("background-image", "url(" + url + ")");
 			
 				
@@ -158,7 +158,7 @@ setPlaceDetails: function(place) {
 				
 				/* do nothing */
 				//url = "https://maps.googleapis.com/maps/api/staticmap?size=" + window.innerWidth + "x150&location=" + place.geometry.location.lat() + "," +  place.geometry.location.lng() + "&zoom=11";
-				url = "https://maps.googleapis.com/maps/api/staticmap?center=" + place.geometry.location.lat() + "," +  place.geometry.location.lng() + "&zoom=19&size=" + window.innerWidth + "x" + Math.round(window.innerHeight/3) + "&maptype=satellite";
+				url = "https://maps.googleapis.com/maps/api/staticmap?key=AIzaSyBSTvlMEfLkRzgdZbqhv7PsA2MulWjgYNs&center=" + place.geometry.location.lat() + "," +  place.geometry.location.lng() + "&zoom=19&size=" + window.innerWidth + "x" + Math.round(window.innerHeight/3) + "&maptype=satellite";
 				this.$.PlaceDetailsImage.applyStyle("background-image", "url(" + url + ")");
 		  
 				}
