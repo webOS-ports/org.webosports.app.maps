@@ -9,5 +9,6 @@
 	"icon": "icon.png",
 	"splashicon": "icon-256x256.png",
 	"uiRevision": "2",
-	"keywords": [ "Maps", "Navigator", "route", "gps", "google" ]
+	"keywords": [ "Maps", "Navigator", "route", "gps", "google" ],
+	"requiredPermissions": [ "system", "networking.internal", "services" ]
 }
