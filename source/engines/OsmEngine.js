@@ -375,6 +375,7 @@ MapEngines.register("osm", MapEngines.extend({
 					var step = legSteps[s];
 					var location = new MapEngines.LatLng(step.maneuver.location[1], step.maneuver.location[0]);
 					steps.push({
+						leg: l,
 						instructions: this.instruction(step, l, osrmRoute.legs.length),
 						maneuver: this.maneuverClass(step),
 						distance: {value: step.distance, text: MapEngines.formatDistance(step.distance)},

@@ -777,3 +777,9 @@ background-size: 100% 3600%;
 	width: 100%;
 	margin: 4px 0;
 }
+
+.directions-panel .guidance-button {
+	display: block;
+	margin: 6px auto;
+	width: 90%;
+}

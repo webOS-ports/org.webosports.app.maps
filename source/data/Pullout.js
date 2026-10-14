@@ -20,7 +20,8 @@ enyo.kind({
 		onSavedSelect: "",
 		onUnitsChange: "",
 		onRouteSelect: "",
-		onRemoveStop: ""
+		onRemoveStop: "",
+		onGuidanceToggle: ""
 	},
 	components: [
 		{name: "shadow", classes: "pullout-shadow"},
@@ -131,6 +132,7 @@ enyo.kind({
 							{kind: "gts.ToggleBar", label: $L("Avoid tolls"), sublabel: "", param: "avoidTolls", name: "avoidTollsToggle", onChange: "setDirectOptions"},
 							{kind: "gts.ToggleBar", label: $L("Avoid highways"), sublabel: "", param: "avoidHighways", name: "avoidHighwaysToggle", onChange: "setDirectOptions"},
 					]},
+					{kind: "onyx.Button", name: "guidanceButton", classes: "onyx-affirmative guidance-button", content: $L("Start voice guidance"), showing: false, ontap: "guidanceTap"},
 					/* the stops between start and destination, each with a remove button */
 					{name: "routeStops", classes: "route-stops", showing: false},
 					/* one button per route when the router offers alternatives */
@@ -610,6 +612,7 @@ enyo.kind({
 	    var chosen = response.routes[index];
 	    this.route = MapEngines.routeSteps(chosen);
 	    this.setRouteChoices(response, index);
+	    this.$.guidanceButton.show();
 
 	    this.$.directions.setCount(this.route.length);
 	    this.$.directions.reset();
@@ -669,6 +672,15 @@ enyo.kind({
 		this.doRemoveStop({index: inSender.stopIndex});
 		return true;
 	},
+	guidanceTap: function() {
+		this.doGuidanceToggle();
+		return true;
+	},
+	setGuidanceActive: function(inActive) {
+		this.$.guidanceButton.setContent(inActive ? $L("Stop voice guidance") : $L("Start voice guidance"));
+		this.$.guidanceButton.addRemoveClass("onyx-affirmative", !inActive);
+		this.$.guidanceButton.addRemoveClass("onyx-negative", inActive);
+	},
 	routeChoiceTap: function(inSender) {
 		this.doRouteSelect({index: inSender.routeIndex});
 		return true;
@@ -676,6 +688,7 @@ enyo.kind({
 	clearDirectData: function() {
 		this.route = [];
 		this.setRouteChoices(null, 0);
+		this.$.guidanceButton.hide();
 		this.$.directions.setCount(0);
 	    this.$.directions.reset();	        
 	    this.$.directWarnings.hide();

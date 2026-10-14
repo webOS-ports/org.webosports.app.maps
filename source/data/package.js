@@ -11,5 +11,6 @@ enyo.depends(
 	"Helper.js",
 	"SavedPlaces.js",
 	"Share.js",
+	"Guidance.js",
 	"Pullout.js"
 );

@@ -315,3 +315,81 @@ test('sharing a place: text with an openstreetmap.org link, mailto and sms encod
 	// a place named after its address does not repeat it
 	assert.strictEqual(c.Share.text({name: 'A', formatted_address: 'A', geometry: place.geometry}), 'A\n' + link);
 });
+
+function loadGuidance(prefs) {
+	const c = loadEngines(prefs);
+	vm.runInContext(fs.readFileSync(path.join(root, 'source/data/Guidance.js'), 'utf8'), c, {filename: 'Guidance.js'});
+	return c;
+}
+
+// a 2 km route due north: start, a left turn after 1 km, arrival after 2 km
+function straightRoute(c) {
+	const LatLng = c.MapEngines.LatLng;
+	const north = (m) => new LatLng(52 + m / 111195, 5);
+	const steps = [
+		{instructions: 'Head north on <b>Startweg</b>', start_location: north(0), leg: 0},
+		{instructions: 'Turn left onto <b>Damrak</b>', start_location: north(1000), leg: 0},
+		{instructions: 'Arrive at your destination', start_location: north(2000), leg: 0}
+	];
+	const path = [[52, 5], [52 + 1000 / 111195, 5], [52 + 2000 / 111195, 5]];
+	return {steps, path, north};
+}
+
+test('voice guidance announces each maneuver early, then now, then arrival - once each', () => {
+	const c = loadGuidance();
+	const {steps, path, north} = straightRoute(c);
+	const said = [c.Guidance.start(steps, path, 'DRIVING')[0]];
+	for (let m = 0; m <= 2000; m += 50) {
+		said.push(...c.Guidance.update(north(m)));
+	}
+	assert.deepStrictEqual(said, [
+		'Head north on Startweg',
+		// the first fix within 500 m of the turn is 450 m before it
+		'In 450 meters, turn left onto Damrak',
+		'Now, turn left onto Damrak',
+		'In 450 meters, arrive at your destination',
+		'Arrive at your destination'
+	]);
+	assert.ok(c.Guidance.arrived);
+	assert.deepStrictEqual(Array.from(c.Guidance.update(north(2000))), [], 'nothing more after arriving');
+});
+
+test('voice guidance asks for a new route only after several fixes off it', () => {
+	const c = loadGuidance();
+	const {steps, path} = straightRoute(c);
+	let reroutes = 0;
+	c.Guidance.start(steps, path, 'DRIVING', {onReroute: () => { reroutes++; }});
+	const east = (m) => new c.MapEngines.LatLng(52 + 300 / 111195, 5 + m / (111195 * Math.cos(52 * Math.PI / 180)));
+	assert.deepStrictEqual(Array.from(c.Guidance.update(east(150))), []);
+	assert.deepStrictEqual(Array.from(c.Guidance.update(east(160))), []);
+	assert.deepStrictEqual(Array.from(c.Guidance.update(east(170))), ['Recalculating']);
+	assert.strictEqual(reroutes, 1);
+	// 20 m beside the road is still on it
+	c.Guidance.start(steps, path, 'DRIVING', {onReroute: () => { reroutes++; }});
+	for (let i = 0; i < 5; i++) c.Guidance.update(east(20));
+	assert.strictEqual(reroutes, 1);
+});
+
+test('voice guidance counts the stops passed by the leg of the next maneuver', () => {
+	const c = loadGuidance();
+	const route = {legs: [
+		{steps: [{instructions: 'Head north'}, {instructions: 'Arrive at stop 1'}]},
+		{steps: [{instructions: 'Head east'}, {instructions: 'Arrive at your destination'}]}
+	]};
+	const steps = c.Guidance.stepsOf(route);
+	assert.deepStrictEqual(Array.from(steps, (s) => s.leg), [0, 0, 1, 1]);
+	c.Guidance.start(steps.map((s, i) => Object.assign(s, {start_location: new c.MapEngines.LatLng(52 + i / 100, 5)})), [], 'WALKING');
+	c.Guidance.next = 3;
+	assert.strictEqual(c.Guidance.stopsPassed(), 1);
+});
+
+test('spoken distances are rounded the way people say them', () => {
+	const metric = loadGuidance().Guidance;
+	assert.strictEqual(metric.spokenDistance(47), '50 meters');
+	assert.strictEqual(metric.spokenDistance(312), '300 meters');
+	assert.strictEqual(metric.spokenDistance(1460), '1.5 kilometers');
+	const imperial = loadGuidance({lengthUnits: 'imperial'}).Guidance;
+	assert.strictEqual(imperial.spokenDistance(100), '300 feet');
+	assert.strictEqual(imperial.spokenDistance(1609.344), '1 mile');
+	assert.strictEqual(imperial.spokenDistance(3218.7), '2 miles');
+});

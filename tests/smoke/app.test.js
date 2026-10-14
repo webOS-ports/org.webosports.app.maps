@@ -254,6 +254,45 @@ async function waitFor(page, fn, timeout = 20000, arg) {
 	check('osm: no stops listed after removing it', await page.evaluate(`!${mainView}.$.pullout.$.routeStops.showing && ${mainView}.directRequest.waypoints.length == 0`));
 	await page.evaluate(`${mainView}.clearMap()`);
 
+	// voice guidance: drive the route by its own geometry and listen
+	if (await page.evaluate(`!!${mainView}.myLocationMarker`)) {
+		await page.evaluate(`(function(v){ v.clearMap(); v.$.getDirectButton.setDisabled(false); v.directRequest.origin = currentPos; v.directRequest.destination = mapEngine.latLng(52.3584, 4.8811); v.directRequest.travelMode = "DRIVING"; v.$.directionStart.setValue("My Location"); v.calcRoute(); })(${mainView})`);
+		await waitFor(page, `mapEngine.routeLayer && ${mainView}.directResponse`, 30000);
+		check('osm: voice guidance offered for a route', await page.evaluate(`${mainView}.$.pullout.$.guidanceButton.showing && ${mainView}.$.pullout.$.guidanceButton.content == "Start voice guidance"`));
+		await page.evaluate(`(function(){ window.__said = []; var speak = Guidance.speak; Guidance.speak = function(s){ window.__said = window.__said.concat(s); window.__queued = window.__queued || 0; speak.call(Guidance, s); if (s.length && window.speechSynthesis && (speechSynthesis.speaking || speechSynthesis.pending)) window.__queued++; }; })()`);
+		await page.evaluate(`${mainView}.$.pullout.guidanceTap()`);
+		check('osm: starting guidance says the first instruction and follows the position', await page.evaluate(`Guidance.active && window.__said.length == 1 && ${mainView}.trackPosition && ${mainView}.$.pullout.$.guidanceButton.content == "Stop voice guidance" && ${mainView}.$.directPopup.showing`),
+			await page.evaluate(`window.__said`));
+		// fixes every ~40 m along the route's own geometry
+		const fixes = await page.evaluate(`(function(){ var p = ${mainView}.directResponse.routes[${mainView}.routeIndex].path, out = [], carry = 0;
+			for (var i = 1; i < p.length; i++) { var a = mapEngine.latLng(p[i-1][0], p[i-1][1]), b = mapEngine.latLng(p[i][0], p[i][1]), d = MapEngines.distance(a, b);
+				for (var t = carry; t < d; t += 40) { var f = t / d; out.push([p[i-1][0] + (p[i][0]-p[i-1][0]) * f, p[i-1][1] + (p[i][1]-p[i-1][1]) * f]); } carry = Math.max(0, t - d); }
+			out.push(p[p.length-1]); return out; })()`);
+		for (const [lat, lng] of fixes) {
+			await page.evaluate(`${mainView}.trackingLocationSuccess(null, {coords: {latitude: ${lat}, longitude: ${lng}, accuracy: 10}})`);
+		}
+		const said = await page.evaluate(`window.__said`);
+		check('osm: guidance announces the turns ("Now, ...") on the way', said.filter((x) => /^Now, /.test(x)).length >= 2, said);
+		check('osm: guidance announces the arrival and stops', said[said.length - 1] === 'Arrive at your destination' && await page.evaluate(`!Guidance.active && ${mainView}.$.pullout.$.guidanceButton.content == "Start voice guidance"`), said.slice(-3));
+		check('osm: no sentence said twice in a row', said.every((x, i) => i == 0 || x !== said[i - 1]), said);
+		if (connect) {
+			check('osm: the device speaks (speechSynthesis queued the sentences)', await page.evaluate(`window.__queued > 0 && speechSynthesis.getVoices().length > 0`), await page.evaluate(`[window.__queued, speechSynthesis.getVoices().length]`));
+			await page.evaluate(`speechSynthesis.cancel()`);
+		}
+		// off the route: a new route from where we are
+		await page.evaluate(`window.__said = []; window.__before = ${mainView}.directResponse; ${mainView}.$.pullout.guidanceTap()`);
+		const [olat, olng] = fixes[Math.floor(fixes.length / 3)];
+		for (let i = 0; i < 3; i++) {
+			await page.evaluate(`${mainView}.trackingLocationSuccess(null, {coords: {latitude: ${olat + 0.003}, longitude: ${olng + 0.003}, accuracy: 10}})`);
+		}
+		check('osm: leaving the route says "Recalculating" and routes again from there', await waitFor(page, `${mainView}.directResponse !== window.__before && window.__said.indexOf("Recalculating") >= 0 && Guidance.active`, 30000),
+			await page.evaluate(`window.__said`));
+		await page.evaluate(`${mainView}.clearMap()`);
+		check('osm: clearing the map stops guidance', await page.evaluate(`!Guidance.active`));
+	} else {
+		console.log('INFO no position, voice guidance not checked');
+	}
+
 	// unsupported travel mode reports instead of throwing
 	await page.evaluate(`(function(v){ v.$.infoDialog.hide(); v.directRequest.travelMode = "TRANSIT"; v.calcRoute(); })(${mainView})`);
 	check('osm: TRANSIT shows info dialog', await waitFor(page, `${mainView}.$.infoDialog.showing`, 5000), await page.evaluate(`${mainView}.$.infoDialogContent.content`));

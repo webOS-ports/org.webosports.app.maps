@@ -141,6 +141,7 @@ enyo.kind({
 			onUnitsChange: "unitsChange",
 			onRouteSelect: "routeSelect",
 			onRemoveStop: "routeRemoveStop",
+			onGuidanceToggle: "guidanceToggle",
 			onDirectOptions: "directOptions",
 			onFillDirectField: "fillDirectField",
 			onSetDirectStep: "setDirectStep",
@@ -676,6 +677,7 @@ trackingLocationSuccess: function(inSender, inData) {
 	this.circle.setCenter(currentPos);
 	this.circle.setRadius(inData.coords.accuracy); // update accuracy circle
 	this.updateCompassPosition(currentPos);
+	if (Guidance.active) this.guidanceUpdate();
 },
 
 currentLocationFailure: function(inSender, inData) {
@@ -908,6 +910,7 @@ clearMap: function (inSender, inEvent) {
 	this.$.searchLocation.place = null;
 	
 	/* Clear directions */
+	this.guidanceStop();
 	mapEngine.clearRoute();
 	this.directResponse = null;
 	this.directRequest.waypoints = [];
@@ -1487,12 +1490,15 @@ calcRoute: function() {
 
 			if (!status) {
 				this.directResponse = response;
+				var guiding = Guidance.active;
 				/* on wide screens the directions panel opens on the right: fit the route beside it */
 				this.routePanelWidth = (window.innerWidth > 480) ? 320 : 0;
 				if (this.routePanelWidth) { this.$.pullout.openPullout("directpanel"); this.$.directRadio.setActive(true); };
 				this.showRouteChoice(0, true);
 				this.lastPanel = "directpanel";
 				this.$.getDirectButton.setDisabled(true);
+				/* a new route while guiding (rerouting): continue the guidance on it */
+				if (guiding) this.guidanceStart();
 			} else { 
 				enyo.log("Route failed: ", status);
 				this.info($L("No route") + ": " + $L(String(status)));
@@ -1580,6 +1586,66 @@ shareCopy: function() {
 
 routeSelect: function(inSender, inEvent) {
 	this.showRouteChoice(inEvent.index, false);
+	if (Guidance.active) this.guidanceStart();
+},
+
+/* voice guidance along the shown route, see Guidance.js */
+guidanceToggle: function() {
+	if (Guidance.active) {
+		this.guidanceStop();
+	} else {
+		this.guidanceStart();
+	}
+},
+
+guidanceStart: function() {
+	var route = this.directResponse.routes[this.routeIndex || 0];
+	var path = route.path || (route.overview_path || []).map(function (inPoint) {
+		return [inPoint.lat(), inPoint.lng()];
+	});
+	var say = Guidance.start(Guidance.stepsOf(route), path, this.directRequest.travelMode, {onReroute: this.guidanceReroute.bind(this)});
+	Guidance.speak(say);
+	this.trackPosition = true;
+	this.$.myLocation.setValue(true);
+	if (window.PalmSystem && window.PalmSystem.setWindowProperties) this.blockScreenTimeout(true);
+	this.$.pullout.setGuidanceActive(true);
+	if (window.innerWidth <= 480) this.$.pullout.closePullout();
+	this.guidanceShow();
+},
+
+guidanceStop: function() {
+	if (!Guidance.active) return;
+	Guidance.stop();
+	if (window.PalmSystem && window.PalmSystem.setWindowProperties) this.blockScreenTimeout(false);
+	this.$.pullout.setGuidanceActive(false);
+},
+
+guidanceUpdate: function() {
+	var say = Guidance.update(currentPos);
+	Guidance.speak(say);
+	if (Guidance.arrived) {
+		this.guidanceStop();
+		return;
+	}
+	this.guidanceShow();
+},
+
+/* the next maneuver and the distance to it in the step popup */
+guidanceShow: function() {
+	var step = Guidance.nextStep();
+	if (!step) return;
+	var distance = Guidance.distanceToNext(currentPos);
+	this.directMarkerClick(null, {maneuver: step.maneuver, instructions: step.instructions, distance: {text: MapEngines.formatDistance(distance)}});
+},
+
+/* off the route: a new one from here, without the stops already passed */
+guidanceReroute: function() {
+	this.directRequest.origin = currentPos;
+	this.directRequest.waypoints = this.directRequest.waypoints.slice(Guidance.stopsPassed());
+	this.$.pullout.setStops(this.directRequest.waypoints);
+	this.$.directionStart.setValue($L("My Location"));
+	this.$.getDirectButton.setDisabled(false);
+	this.calcRoute();
 },
 
 bookmarkSelect: function (inSender, inEvent) {
