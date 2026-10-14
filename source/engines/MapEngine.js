@@ -75,6 +75,31 @@ var MapEngines = {
 		return Math.floor(minutes / 60) + " h " + (minutes % 60) + " " + $L("min");
 	},
 
+	/* all steps of a route, over every leg (a leg per stop) */
+	routeSteps: function (inRoute) {
+		var steps = [];
+		for (var l = 0; l < inRoute.legs.length; l++) {
+			steps = steps.concat(inRoute.legs[l].steps);
+		}
+		return steps;
+	},
+
+	/* total distance and duration of a route, over every leg */
+	routeSummary: function (inRoute) {
+		if (inRoute.legs.length == 1) {
+			return {distance: inRoute.legs[0].distance, duration: inRoute.legs[0].duration};
+		}
+		var meters = 0, seconds = 0;
+		for (var l = 0; l < inRoute.legs.length; l++) {
+			meters += inRoute.legs[l].distance.value;
+			seconds += inRoute.legs[l].duration.value;
+		}
+		return {
+			distance: {value: meters, text: this.formatDistance(meters)},
+			duration: {value: seconds, text: this.formatDuration(seconds)}
+		};
+	},
+
 	loadScript: function (inSrc, inOnLoad, inOnError) {
 		var script = document.createElement("script");
 		script.type = "text/javascript";
@@ -213,9 +238,9 @@ MapEngines.Base.prototype = {
 	updateScale: function () {},
 	/* inCallback(error, place) */
 	reverseGeocode: function (inLatLng, inCallback) { inCallback("Not supported"); },
-	/* inRequest: {origin, destination, travelMode, provideRouteAlternatives, avoidTolls, avoidHighways}; inCallback(error, response) */
+	/* inRequest: {origin, destination, waypoints: [{location, name}], travelMode, provideRouteAlternatives, avoidTolls, avoidHighways}; inCallback(error, response) */
 	route: function (inRequest, inCallback) { inCallback("Not supported"); },
-	/* draws route inIndex of inResponse; inOptions: {fit: fit the view to it, onSelect(index): the user picked another route on the map} */
+	/* draws route inIndex of inResponse; inOptions: {fit: fit the view to it, padRight: pixels covered on the right (the directions panel), onSelect(index): the user picked another route on the map} */
 	showRoute: function (inResponse, inIndex, inOptions) {},
 	clearRoute: function () {},
 	/* inCallback(error, meters) */

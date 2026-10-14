@@ -342,7 +342,12 @@ MapEngines.register("osm", MapEngines.extend({
 			inCallback($L("This travel mode is not available with OpenStreetMap"));
 			return;
 		}
-		var coordinates = inRequest.origin.lng() + "," + inRequest.origin.lat() + ";" + inRequest.destination.lng() + "," + inRequest.destination.lat();
+		var points = [inRequest.origin].concat((inRequest.waypoints || []).map(function (inStop) {
+			return inStop.location;
+		}), [inRequest.destination]);
+		var coordinates = points.map(function (inPoint) {
+			return inPoint.lng() + "," + inPoint.lat();
+		}).join(";");
 		var url = (Prefs.osmRoutingUrl || this.routingUrl) + "/" + profile + "/route/v1/driving/" + coordinates + "?" + MapEngines.query({
 			overview: "full",
 			geometries: "geojson",
@@ -370,7 +375,7 @@ MapEngines.register("osm", MapEngines.extend({
 					var step = legSteps[s];
 					var location = new MapEngines.LatLng(step.maneuver.location[1], step.maneuver.location[0]);
 					steps.push({
-						instructions: this.instruction(step),
+						instructions: this.instruction(step, l, osrmRoute.legs.length),
 						maneuver: this.maneuverClass(step),
 						distance: {value: step.distance, text: MapEngines.formatDistance(step.distance)},
 						duration: {value: step.duration, text: MapEngines.formatDuration(step.duration)},
@@ -426,7 +431,8 @@ MapEngines.register("osm", MapEngines.extend({
 		}
 		return "straight";
 	},
-	instruction: function (inStep) {
+	/* inLeg of inLegCount: the arrival at the end of a leg other than the last is a stop */
+	instruction: function (inStep, inLeg, inLegCount) {
 		var m = inStep.maneuver;
 		var road = inStep.name || inStep.ref || "";
 		var onto = road ? " " + $L("onto") + " <b>" + this.escape(road) + "</b>" : "";
@@ -435,6 +441,7 @@ MapEngines.register("osm", MapEngines.extend({
 			case "depart":
 				return $L("Head") + " " + this.headingText(m.bearing_after) + (road ? " " + $L("on") + " <b>" + this.escape(road) + "</b>" : "");
 			case "arrive":
+				if (inLegCount && inLeg < inLegCount - 1) return $L("Arrive at stop") + " " + (inLeg + 1);
 				return $L("Arrive at your destination");
 			case "roundabout":
 			case "rotary":
@@ -506,7 +513,10 @@ MapEngines.register("osm", MapEngines.extend({
 			weight: 8
 		}).addTo(this.map);
 		if (options.fit !== false) {
-			this.map.fitBounds(this.routeLayer.getBounds());
+			this.map.fitBounds(this.routeLayer.getBounds(), {
+				paddingTopLeft: [20, 20],
+				paddingBottomRight: [20 + (options.padRight || 0), 20]
+			});
 		}
 	},
 	clearRoute: function () {

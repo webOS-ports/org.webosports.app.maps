@@ -267,6 +267,9 @@ MapEngines.register("google", MapEngines.extend({
 		var request = enyo.mixin({}, inRequest);
 		request.travelMode = google.maps.TravelMode[inRequest.travelMode];
 		request.unitSystem = (Prefs.lengthUnits == "imperial") ? google.maps.UnitSystem.IMPERIAL : google.maps.UnitSystem.METRIC;
+		request.waypoints = (inRequest.waypoints || []).map(function (inStop) {
+			return {location: inStop.location, stopover: true};
+		});
 		this.directionsService.route(request, function (response, status) {
 			if (status == google.maps.DirectionsStatus.OK) {
 				inCallback(null, response);
@@ -275,10 +278,15 @@ MapEngines.register("google", MapEngines.extend({
 			}
 		});
 	},
-	showRoute: function (inResponse, inIndex) {
+	showRoute: function (inResponse, inIndex, inOptions) {
+		var options = inOptions || {};
+		this.directionsDisplay.setOptions({preserveViewport: true});
 		this.directionsDisplay.setDirections(inResponse);
 		this.directionsDisplay.setRouteIndex(inIndex || 0);
 		this.directionsDisplay.setMap(this.map);
+		if (options.fit !== false) {
+			this.map.fitBounds(inResponse.routes[inIndex || 0].bounds, {top: 20, left: 20, bottom: 20, right: 20 + (options.padRight || 0)});
+		}
 	},
 	clearRoute: function () {
 		this.directionsDisplay.setMap(null);

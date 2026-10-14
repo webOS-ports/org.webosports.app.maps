@@ -254,3 +254,47 @@ test('OSRM alternatives become separate routes, each with its own summary and st
 	assert.deepStrictEqual(Array.from(routes, (r) => r.legs[0].steps.length), [7, 3]);
 	assert.deepStrictEqual(Array.from(routes[1].path[1]), [52.36, 4.87]);
 });
+
+test('a route with a stop: steps of both legs, the stop announced, all points requested', () => {
+	const c = loadEngines();
+	const osm = c.MapEngines.create('osm');
+	const data = osrmResponse();
+	const legs = data.routes[0].legs;
+	// split the route at the roundabout into two legs, each ending in an arrival
+	const first = {steps: legs[0].steps.slice(0, 3).concat([
+		{name: '', distance: 0, duration: 0, driving_side: 'right', maneuver: {type: 'arrive', location: [4.89, 52.37], bearing_after: 0}}
+	])};
+	const second = {steps: [
+		{name: 'Museumstraat', distance: 40, duration: 4, driving_side: 'right', maneuver: {type: 'depart', location: [4.89, 52.37], bearing_after: 180}}
+	].concat(legs[0].steps.slice(3))};
+	data.routes[0].legs = [first, second];
+	const steps = c.MapEngines.routeSteps(osm.directionsFromOsrm(data).routes[0]);
+	const texts = Array.from(steps, (s) => s.instructions);
+	assert.strictEqual(steps.length, 4 + 5);
+	assert.strictEqual(texts[3], 'Arrive at stop 1');
+	assert.strictEqual(texts[texts.length - 1], 'Arrive at your destination');
+
+	let url;
+	c.MapEngines.getJSON = (u) => { url = u; };
+	osm.route({
+		travelMode: 'DRIVING',
+		origin: new c.MapEngines.LatLng(52.3791, 4.9003),
+		waypoints: [{location: new c.MapEngines.LatLng(52.36, 4.8852), name: 'Rijksmuseum'}],
+		destination: new c.MapEngines.LatLng(52.3584, 4.8811)
+	}, () => {});
+	assert.ok(url.includes('/route/v1/driving/4.9003,52.3791;4.8852,52.36;4.8811,52.3584?'), url);
+});
+
+test('route summary and steps add up the legs of a route with stops', () => {
+	const c = loadEngines();
+	const route = {legs: [
+		{distance: {value: 1500, text: '1.5 km'}, duration: {value: 300, text: '5 min'}, steps: [{n: 1}, {n: 2}]},
+		{distance: {value: 2600, text: '2.6 km'}, duration: {value: 600, text: '10 min'}, steps: [{n: 3}]}
+	]};
+	const summary = c.MapEngines.routeSummary(route);
+	assert.strictEqual(summary.distance.text, '4.1 km');
+	assert.strictEqual(summary.duration.text, '15 min');
+	assert.deepStrictEqual(Array.from(c.MapEngines.routeSteps(route), (s) => s.n), [1, 2, 3]);
+	const single = {legs: [route.legs[0]]};
+	assert.strictEqual(c.MapEngines.routeSummary(single).duration.text, '5 min');
+});

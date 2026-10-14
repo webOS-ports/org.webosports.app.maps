@@ -19,7 +19,8 @@ enyo.kind({
 		onEngineChange: "",
 		onSavedSelect: "",
 		onUnitsChange: "",
-		onRouteSelect: ""
+		onRouteSelect: "",
+		onRemoveStop: ""
 	},
 	components: [
 		{name: "shadow", classes: "pullout-shadow"},
@@ -130,6 +131,8 @@ enyo.kind({
 							{kind: "gts.ToggleBar", label: $L("Avoid tolls"), sublabel: "", param: "avoidTolls", name: "avoidTollsToggle", onChange: "setDirectOptions"},
 							{kind: "gts.ToggleBar", label: $L("Avoid highways"), sublabel: "", param: "avoidHighways", name: "avoidHighwaysToggle", onChange: "setDirectOptions"},
 					]},
+					/* the stops between start and destination, each with a remove button */
+					{name: "routeStops", classes: "route-stops", showing: false},
 					/* one button per route when the router offers alternatives */
 					{name: "routeChoices", classes: "route-choices", showing: false},
 					{kind: "onyx.Button", name: "directWarnings", classes: "onyx-negative", style: "width: 320px; height: auto", showing: false, ontap: "activateWarningsDrawer"},
@@ -605,7 +608,7 @@ enyo.kind({
 	    
 	    var index = inIndex || 0;
 	    var chosen = response.routes[index];
-	    this.route = chosen.legs[0].steps;
+	    this.route = MapEngines.routeSteps(chosen);
 	    this.setRouteChoices(response, index);
 
 	    this.$.directions.setCount(this.route.length);
@@ -636,7 +639,7 @@ enyo.kind({
 		var routes = response ? response.routes : [];
 		if (routes.length > 1) {
 			for (var r = 0; r < routes.length; r++) {
-				var leg = routes[r].legs[0];
+				var leg = MapEngines.routeSummary(routes[r]);
 				this.$.routeChoices.createComponent({
 					kind: "onyx.Button",
 					name: "routeChoice" + r,
@@ -649,6 +652,22 @@ enyo.kind({
 			this.$.routeChoices.render();
 		}
 		this.$.routeChoices.setShowing(routes.length > 1);
+	},
+	/* inStops: [{location, name}] */
+	setStops: function(inStops) {
+		this.$.routeStops.destroyClientControls();
+		for (var s = 0; s < inStops.length; s++) {
+			this.$.routeStops.createComponent({classes: "route-stop", components: [
+				{classes: "route-stop-name", content: $L("Stop") + " " + (s + 1) + ": " + inStops[s].name},
+				{kind: "onyx.Button", name: "removeStop" + s, classes: "route-stop-remove", content: "\u00d7", stopIndex: s, ontap: "removeStopTap"}
+			]}, {owner: this});
+		}
+		this.$.routeStops.setShowing(inStops.length > 0);
+		this.$.routeStops.render();
+	},
+	removeStopTap: function(inSender) {
+		this.doRemoveStop({index: inSender.stopIndex});
+		return true;
 	},
 	routeChoiceTap: function(inSender) {
 		this.doRouteSelect({index: inSender.routeIndex});

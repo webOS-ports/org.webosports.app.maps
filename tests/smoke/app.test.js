@@ -204,13 +204,18 @@ async function waitFor(page, fn, timeout = 20000, arg) {
 			index: v.routeIndex,
 			buttons: p.$.routeChoices.getClientControls().length,
 			active: p.$.routeChoices.getClientControls().map(function(b){ return b.hasClass("onyx-blue"); }).indexOf(true),
-			stepsMatch: p.route === r[v.routeIndex].legs[0].steps,
+			stepsMatch: (function(want){ return p.route.length == want.length && p.route.every(function(st, i){ return st === want[i]; }); })(MapEngines.routeSteps(r[v.routeIndex])),
 			summary: v.$.directResultsBar.content.indexOf(r[v.routeIndex].legs[0].duration.text) >= 0,
 			alternativesDrawn: mapEngine.alternativeLayers.length,
 			drawnIsChosen: mapEngine.routeLayer.getLatLngs().length == r[v.routeIndex].path.length
 		}; })(${mainView})`;
 		await sleep(1500);
-		check('osm: a new route opens as an overview', await page.evaluate(`mapEngine.map.getBounds().pad(0.05).contains(mapEngine.routeLayer.getBounds())`), await page.evaluate('[mapEngine.getZoom(), mapEngine.map.getZoom()]'));
+		// the whole route in the part of the map the directions panel does not cover
+		const clearOfPanel = `(function(){ var m = mapEngine.map, b = mapEngine.routeLayer.getBounds(), size = m.getSize(); var panel = ${mainView}.routePanelWidth || 0;
+			var nw = m.latLngToContainerPoint(b.getNorthWest()), se = m.latLngToContainerPoint(b.getSouthEast());
+			return {ok: nw.x >= -2 && nw.y >= -2 && se.x <= size.x - panel + 2 && se.y <= size.y + 2, west: Math.round(nw.x), east: Math.round(se.x), visibleUpTo: size.x - panel}; })()`;
+		const overview = await page.evaluate(clearOfPanel);
+		check('osm: a new route opens as an overview, clear of the directions panel', overview.ok, overview);
 		check('osm: the zoom the engine reports is the map zoom after fitting a route', await page.evaluate('mapEngine.getZoom() === mapEngine.map.getZoom()'), await page.evaluate('[mapEngine.getZoom(), mapEngine.map.getZoom()]'));
 		const first = await page.evaluate(state);
 		check('osm: one choice per route, the first active', first.buttons === routeCount && first.active === 0 && first.index === 0 && first.stepsMatch && first.drawnIsChosen && first.alternativesDrawn === routeCount - 1, first);
@@ -229,6 +234,25 @@ async function waitFor(page, fn, timeout = 20000, arg) {
 		console.log('INFO the router offered one route Amsterdam - Utrecht, alternatives not checked');
 		await page.evaluate(`${mainView}.clearMap()`);
 	}
+
+	// a stop on the way: added from the marker menu, removed in the directions panel
+	const arriveAtStop = `${mainView}.$.pullout.route.some(function(st){ return /Arrive at stop 1/.test(st.instructions); })`;
+	await page.evaluate(`(function(v){ v.clearMap(); v.$.getDirectButton.setDisabled(false); v.directRequest.origin = mapEngine.latLng(52.3791, 4.9003); v.directRequest.destination = mapEngine.latLng(52.3584, 4.8811); v.directRequest.travelMode = "DRIVING"; v.calcRoute(); })(${mainView})`);
+	await waitFor(page, `mapEngine.routeLayer && ${mainView}.directResponse`, 30000);
+	const plain = await page.evaluate(`${mainView}.directResponse`);
+	await page.evaluate(`(function(v){ v.PlaceMarker([{id: "stop-rijksmuseum", name: "Rijksmuseum", formatted_address: "Museumstraat 1", icon: "assets/lune-marker-red-64-64.png", lunetype: "dropped", geometry: {location: mapEngine.latLng(52.3600, 4.8852)}}]); })(${mainView})`);
+	check('osm: marker menu offers Add as stop', await page.evaluate(`${mainView}.$.markerStop.content`) === 'Add as stop');
+	await page.evaluate(`window.__plainResponse = ${mainView}.directResponse; ${mainView}.routeAddStop()`);
+	check('osm: adding a stop recalculates the route through it', await waitFor(page, `${mainView}.directResponse !== window.__plainResponse && ${arriveAtStop}`, 30000),
+		await page.evaluate(`${mainView}.$.directResultsBar.content`));
+	check('osm: the stop is listed in the directions panel', await page.evaluate(`(function(p){ var rows = p.$.routeStops.getClientControls(); return p.$.routeStops.showing && rows.length == 1 && /Stop 1: Rijksmuseum/.test(rows[0].getClientControls()[0].content); })(${mainView}.$.pullout)`));
+	await page.evaluate(`${mainView}.$.pullout.$.directpanel.scrollToTop()`);
+	await sleep(800);
+	await shot(page, '/osm-12-stop.png');
+	await page.evaluate(`window.__stopResponse = ${mainView}.directResponse; ${mainView}.$.pullout.removeStopTap(${mainView}.$.pullout.$.removeStop0)`);
+	check('osm: removing the stop recalculates without it', await waitFor(page, `${mainView}.directResponse !== window.__stopResponse && !(${arriveAtStop})`, 30000));
+	check('osm: no stops listed after removing it', await page.evaluate(`!${mainView}.$.pullout.$.routeStops.showing && ${mainView}.directRequest.waypoints.length == 0`));
+	await page.evaluate(`${mainView}.clearMap()`);
 
 	// unsupported travel mode reports instead of throwing
 	await page.evaluate(`(function(v){ v.$.infoDialog.hide(); v.directRequest.travelMode = "TRANSIT"; v.calcRoute(); })(${mainView})`);

@@ -734,3 +734,26 @@ background-size: 100% 3600%;
 	font-size: 14px;
 	padding: 4px 8px;
 }
+
+/* stops of a route in the directions panel */
+.route-stops {
+	padding: 4px 8px;
+}
+
+.route-stop {
+	display: flex;
+	align-items: center;
+	margin: 2px 0;
+}
+
+.route-stop-name {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.route-stops .route-stop-remove {
+	padding: 2px 10px;
+	margin-left: 6px;
+}

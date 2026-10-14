@@ -88,6 +88,9 @@ enyo.kind({
 			{classes: "onyx-menu-divider"},
 			{kind: "onyx.Icon", classes: "marker-popup-menu-icon", src: "assets/flagB.png"},
 			{name: "markerEnd", classes: "marker-popup-menu-item", content: $L('Route to here'), ontap: "routeFromTo"},
+			{classes: "onyx-menu-divider"},
+			{kind: "onyx.Icon", classes: "marker-popup-menu-icon", src: "assets/icon-directions.png"},
+			{name: "markerStop", classes: "marker-popup-menu-item", content: $L('Add as stop'), ontap: "routeAddStop"},
 			{name: "markerNavitDivider", classes: "onyx-menu-divider", showing: false},
 			{name: "markerNavitIcon", kind: "onyx.Icon", classes: "marker-popup-menu-icon", src: "assets/navit_icon.png", showing: false},
 			{name: "markerNavit", classes: "marker-popup-menu-item", content: $L('Route with Navit'), ontap: "routeWithNavit", showing: false},
@@ -127,6 +130,7 @@ enyo.kind({
 			onSavedSelect: "showSavedPlace",
 			onUnitsChange: "unitsChange",
 			onRouteSelect: "routeSelect",
+			onRemoveStop: "routeRemoveStop",
 			onDirectOptions: "directOptions",
 			onFillDirectField: "fillDirectField",
 			onSetDirectStep: "setDirectStep",
@@ -896,6 +900,8 @@ clearMap: function (inSender, inEvent) {
 	/* Clear directions */
 	mapEngine.clearRoute();
 	this.directResponse = null;
+	this.directRequest.waypoints = [];
+	this.$.pullout.setStops([]);
 	this.$.getDirectButton.setDisabled(false);	
 	this.$.searchBox.setShowing(false);
 	if (this.directStepMarker) this.directStepMarker.remove();
@@ -1348,6 +1354,8 @@ swapDirections: function(inSender, inEvent) {
 	var origin = request.origin;
 	request.origin = request.destination;
 	request.destination = origin;
+	request.waypoints.reverse();
+	this.$.pullout.setStops(request.waypoints);
 
 	var startValue = this.$.directionStart.getValue();
 	var startPlace = this.$.directionStart.place;
@@ -1448,6 +1456,8 @@ setupDirectionService: function () {
           origin: null,
           destination: null,
           travelMode: "DRIVING",
+          /* stops between origin and destination, in order: [{location, name}] */
+          waypoints: [],
           /* offer the alternatives the router has, the user picks one in the directions panel */
           provideRouteAlternatives: !!mapEngine.routeOptions.provideRouteAlternatives
         };
@@ -1467,8 +1477,10 @@ calcRoute: function() {
 
 			if (!status) {
 				this.directResponse = response;
+				/* on wide screens the directions panel opens on the right: fit the route beside it */
+				this.routePanelWidth = (window.innerWidth > 480) ? 320 : 0;
+				if (this.routePanelWidth) { this.$.pullout.openPullout("directpanel"); this.$.directRadio.setActive(true); };
 				this.showRouteChoice(0, true);
-				if (window.innerWidth > 480) { this.$.pullout.openPullout("directpanel"); this.$.directRadio.setActive(true); mapEngine.panBy(-320,0);};
 				this.lastPanel = "directpanel";
 				this.$.getDirectButton.setDisabled(true);
 			} else { 
@@ -1488,9 +1500,37 @@ showRouteChoice: function(inIndex, inFirst) {
 	/* steps first: placing the step marker zooms to the start; drawing the route afterwards fits the
 	   view to the whole route, so a new route opens as an overview where the alternatives show */
 	this.$.pullout.setDirectData(response, inIndex);
-	mapEngine.showRoute(response, inIndex, {fit: inFirst, onSelect: this.showRouteChoice.bind(this)});
-	var leg = response.routes[inIndex].legs[0];
+	mapEngine.showRoute(response, inIndex, {fit: inFirst, padRight: this.routePanelWidth || 0, onSelect: this.showRouteChoice.bind(this)});
+	var leg = MapEngines.routeSummary(response.routes[inIndex]);
 	this.toggleTopBar("directBoxResult", "<span style='color: gray'>From: </span>" + this.$.directionStart.getValue() + "<br><span style='color: gray'>To: </span>" + this.$.directionEnd.getValue() + "<br>" + leg.distance.text + "; " + leg.duration.text);
+},
+
+/* "Add as stop" in the marker menu: the place becomes the last stop before the destination */
+routeAddStop: function(inSender, inEvent) {
+	var place = this.lastClickedMarker.place;
+	this.$.markerPopup.hide();
+	this.$.markerPopupMenu.hide();
+	this.$.directPopup.hide();
+	this.directRequest.waypoints.push({location: place.geometry.location, name: String(place.name)});
+	this.$.pullout.setStops(this.directRequest.waypoints);
+	this.routeStopsChanged();
+},
+
+routeRemoveStop: function(inSender, inEvent) {
+	this.directRequest.waypoints.splice(inEvent.index, 1);
+	this.$.pullout.setStops(this.directRequest.waypoints);
+	this.routeStopsChanged();
+},
+
+/* a route that is shown follows its stops; otherwise the directions form opens */
+routeStopsChanged: function() {
+	if (this.directResponse) {
+		this.$.getDirectButton.setDisabled(false);
+		this.calcRoute();
+	} else {
+		this.statusPanel($L("Stops") + ": " + this.directRequest.waypoints.length, 2);
+		if (!this.$.directBox.showing) this.toggleSearchDirections("routeFromTo");
+	}
 },
 
 routeSelect: function(inSender, inEvent) {
