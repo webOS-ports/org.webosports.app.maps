@@ -80,7 +80,7 @@ enyo.kind({
 			{kind: "onyx.Icon", name: "streetMenuIcon", classes: "marker-popup-menu-icon", src: "assets/streetview-icon.png"},
 			{name: "markerStreet", classes: "marker-popup-menu-item", content: $L('Street View'), ontap: "onMarkerStreet"},
 			{name: "markerStreetDivider", classes: "onyx-menu-divider"},
-			{kind: "onyx.Icon", classes: "marker-popup-menu-icon", src: "assets/star-orange.png"},
+			{kind: "onyx.Icon", classes: "marker-popup-menu-icon", src: "assets/star-favorite.png"},
 			{name: "markerSave", classes: "marker-popup-menu-item", content: $L('Save place'), ontap: "toggleSavePlace"},
 			{classes: "onyx-menu-divider"},
 			{kind: "onyx.Icon", classes: "marker-popup-menu-icon", src: "assets/menu-icon-forward.png"},

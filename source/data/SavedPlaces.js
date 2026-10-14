@@ -67,7 +67,7 @@ var SavedPlaces = {
 			id: "saved-" + this.keyOf(inSaved.lat, inSaved.lng),
 			name: inSaved.name,
 			formatted_address: inSaved.formatted_address,
-			icon: "assets/star-orange.png",
+			icon: "assets/star-favorite.png",
 			lunetype: "saved",
 			geometry: {location: mapEngine.latLng(inSaved.lat, inSaved.lng)}
 		};
