@@ -18,7 +18,8 @@ enyo.kind({
 		onSavePrefs: "",
 		onEngineChange: "",
 		onSavedSelect: "",
-		onUnitsChange: ""
+		onUnitsChange: "",
+		onRouteSelect: ""
 	},
 	components: [
 		{name: "shadow", classes: "pullout-shadow"},
@@ -129,6 +130,8 @@ enyo.kind({
 							{kind: "gts.ToggleBar", label: $L("Avoid tolls"), sublabel: "", param: "avoidTolls", name: "avoidTollsToggle", onChange: "setDirectOptions"},
 							{kind: "gts.ToggleBar", label: $L("Avoid highways"), sublabel: "", param: "avoidHighways", name: "avoidHighwaysToggle", onChange: "setDirectOptions"},
 					]},
+					/* one button per route when the router offers alternatives */
+					{name: "routeChoices", classes: "route-choices", showing: false},
 					{kind: "onyx.Button", name: "directWarnings", classes: "onyx-negative", style: "width: 320px; height: auto", showing: false, ontap: "activateWarningsDrawer"},
 					
 					//{kind: "Scroller", name: "directpanelScroller", touch: true, fixedTime: false, classes: "enyo-fit", style: "bottom: 50px; top: 0px; position: relative", components: [
@@ -361,6 +364,7 @@ enyo.kind({
 		this.$["travel" + modes[m]].setShowing(enyo.indexOf(modes[m], mapEngine.travelModes) >= 0);
 	}
 	this.$.routeAlternativesToggle.setShowing(!!mapEngine.routeOptions.provideRouteAlternatives);
+	this.$.routeAlternativesToggle.setValue(!!mapEngine.routeOptions.provideRouteAlternatives);
 	this.$.avoidTollsToggle.setShowing(!!mapEngine.routeOptions.avoidTolls);
 	this.$.avoidHighwaysToggle.setShowing(!!mapEngine.routeOptions.avoidHighways);
 	this.$.retina.setShowing(mapEngine.id == "google");
@@ -597,9 +601,12 @@ enyo.kind({
 		
 		this.doDirectOptions({params: request, route: this.route});
 	},
-	setDirectData: function(response) {
+	setDirectData: function(response, inIndex) {
 	    
-	    this.route = response.routes[0].legs[0].steps;
+	    var index = inIndex || 0;
+	    var chosen = response.routes[index];
+	    this.route = chosen.legs[0].steps;
+	    this.setRouteChoices(response, index);
 
 	    this.$.directions.setCount(this.route.length);
 	    this.$.directions.reset();
@@ -610,21 +617,46 @@ enyo.kind({
 	    this.$.directCopyrights.hide();
 	    
 	    var warnings = "";
-	    for (var i = 0, warning; warning = response.routes[0].warnings[i]; i++) {
+	    for (var i = 0, warning; warning = chosen.warnings[i]; i++) {
 			warnings += " " + warning;
 		};
-	    if (response.routes[0].warnings.length > 0) {
+	    if (chosen.warnings.length > 0) {
 			this.$.directWarnings.setContent(warnings);
 			this.$.directWarnings.show();
 		};
 		
-		if (response.routes[0].copyrights) {
-			this.$.directCopyrights.setContent(response.routes[0].copyrights);
+		if (chosen.copyrights) {
+			this.$.directCopyrights.setContent(chosen.copyrights);
 			this.$.directCopyrights.show();
 		};
 	},
+	/* "1 · 47 min · 52 km", the chosen route highlighted */
+	setRouteChoices: function(response, index) {
+		this.$.routeChoices.destroyClientControls();
+		var routes = response ? response.routes : [];
+		if (routes.length > 1) {
+			for (var r = 0; r < routes.length; r++) {
+				var leg = routes[r].legs[0];
+				this.$.routeChoices.createComponent({
+					kind: "onyx.Button",
+					name: "routeChoice" + r,
+					classes: "route-choice" + (r == index ? " onyx-blue" : ""),
+					content: (r + 1) + " \u00b7 " + leg.duration.text + " \u00b7 " + leg.distance.text,
+					routeIndex: r,
+					ontap: "routeChoiceTap"
+				}, {owner: this});
+			}
+			this.$.routeChoices.render();
+		}
+		this.$.routeChoices.setShowing(routes.length > 1);
+	},
+	routeChoiceTap: function(inSender) {
+		this.doRouteSelect({index: inSender.routeIndex});
+		return true;
+	},
 	clearDirectData: function() {
 		this.route = [];
+		this.setRouteChoices(null, 0);
 		this.$.directions.setCount(0);
 	    this.$.directions.reset();	        
 	    this.$.directWarnings.hide();

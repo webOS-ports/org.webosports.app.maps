@@ -108,6 +108,10 @@ MapEngines.register("osm", MapEngines.extend({
 		};
 		this.markerLayer = L.layerGroup().addTo(this.map);
 		this.targetZoom = null;
+		/* a zoom we did not start (fitBounds, pinch, wheel) replaces the pending target; ours ends when reached */
+		this.map.on("zoomstart", function () {
+			if (!this.startingZoom) this.targetZoom = null;
+		}, this);
 		this.map.on("zoomend", function () {
 			if (this.targetZoom === this.map.getZoom()) this.targetZoom = null;
 		}, this);
@@ -142,7 +146,13 @@ MapEngines.register("osm", MapEngines.extend({
 			return;
 		}
 		this.targetZoom = zoom;
-		this.map.setZoom(zoom);
+		/* Leaflet fires zoomstart from inside setZoom() */
+		this.startingZoom = true;
+		try {
+			this.map.setZoom(zoom);
+		} finally {
+			this.startingZoom = false;
+		}
 	},
 	fitLatLngs: function (inLatLngs) {
 		var points = [];
@@ -470,19 +480,42 @@ MapEngines.register("osm", MapEngines.extend({
 	escape: function (inText) {
 		return String(inText).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 	},
-	showRoute: function (inResponse) {
+	showRoute: function (inResponse, inIndex, inOptions) {
+		var index = inIndex || 0;
+		var options = inOptions || {};
 		this.clearRoute();
-		this.routeLayer = L.polyline(inResponse.routes[0].path, {
+		/* the other routes first, grey and tappable, so the chosen one is drawn on top */
+		this.alternativeLayers = [];
+		inResponse.routes.forEach(function (inRoute, inRouteIndex) {
+			if (inRouteIndex == index) return;
+			var line = L.polyline(inRoute.path, {
+				interactive: !!options.onSelect,
+				color: '#6f6f6f',
+				opacity: 0.6,
+				weight: 7
+			}).addTo(this.map);
+			if (options.onSelect) {
+				line.on("click", function () { options.onSelect(inRouteIndex); });
+			}
+			this.alternativeLayers.push(line);
+		}, this);
+		this.routeLayer = L.polyline(inResponse.routes[index].path, {
 			interactive: false,
 			color: '#4941e3',
 			opacity: 0.7,
 			weight: 8
 		}).addTo(this.map);
-		this.map.fitBounds(this.routeLayer.getBounds());
+		if (options.fit !== false) {
+			this.map.fitBounds(this.routeLayer.getBounds());
+		}
 	},
 	clearRoute: function () {
 		if (this.routeLayer) this.map.removeLayer(this.routeLayer);
 		this.routeLayer = null;
+		(this.alternativeLayers || []).forEach(function (inLayer) {
+			this.map.removeLayer(inLayer);
+		}, this);
+		this.alternativeLayers = [];
 	},
 	elevation: function (inLatLng, inCallback) {
 		var url = (Prefs.osmElevationUrl || this.elevationUrl) + "?" + MapEngines.query({

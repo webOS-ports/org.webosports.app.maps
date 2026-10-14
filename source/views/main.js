@@ -126,6 +126,7 @@ enyo.kind({
 			onEngineChange: "engineChange",
 			onSavedSelect: "showSavedPlace",
 			onUnitsChange: "unitsChange",
+			onRouteSelect: "routeSelect",
 			onDirectOptions: "directOptions",
 			onFillDirectField: "fillDirectField",
 			onSetDirectStep: "setDirectStep",
@@ -894,6 +895,7 @@ clearMap: function (inSender, inEvent) {
 	
 	/* Clear directions */
 	mapEngine.clearRoute();
+	this.directResponse = null;
 	this.$.getDirectButton.setDisabled(false);	
 	this.$.searchBox.setShowing(false);
 	if (this.directStepMarker) this.directStepMarker.remove();
@@ -1445,7 +1447,9 @@ setupDirectionService: function () {
 	this.directRequest = {
           origin: null,
           destination: null,
-          travelMode: "DRIVING"
+          travelMode: "DRIVING",
+          /* offer the alternatives the router has, the user picks one in the directions panel */
+          provideRouteAlternatives: !!mapEngine.routeOptions.provideRouteAlternatives
         };
 	
 },
@@ -1462,14 +1466,11 @@ calcRoute: function() {
 		mapEngine.route(this.directRequest, function(status, response) {
 
 			if (!status) {
-				mapEngine.showRoute(response);
+				this.directResponse = response;
+				this.showRouteChoice(0, true);
 				if (window.innerWidth > 480) { this.$.pullout.openPullout("directpanel"); this.$.directRadio.setActive(true); mapEngine.panBy(-320,0);};
 				this.lastPanel = "directpanel";
 				this.$.getDirectButton.setDisabled(true);
-				this.$.pullout.setDirectData(response);
-				this.routeIndex = 0;
-				var description = response.routes[this.routeIndex].legs[0].distance.text + "; " + response.routes[this.routeIndex].legs[0].duration.text;
-				this.toggleTopBar("directBoxResult", "<span style='color: gray'>From: </span>" + this.$.directionStart.getValue() + "<br><span style='color: gray'>To: </span>" + this.$.directionEnd.getValue() + "<br>" + description);
 			} else { 
 				enyo.log("Route failed: ", status);
 				this.info($L("No route") + ": " + $L(String(status)));
@@ -1478,6 +1479,22 @@ calcRoute: function() {
 	} else {
 		this.info($L("Request is not complete, be sure that the Origin and Destination is set properly and try it again."));
 	};
+},
+
+/* show one of the routes the router offered: map, steps and summary follow */
+showRouteChoice: function(inIndex, inFirst) {
+	var response = this.directResponse;
+	this.routeIndex = inIndex;
+	/* steps first: placing the step marker zooms to the start; drawing the route afterwards fits the
+	   view to the whole route, so a new route opens as an overview where the alternatives show */
+	this.$.pullout.setDirectData(response, inIndex);
+	mapEngine.showRoute(response, inIndex, {fit: inFirst, onSelect: this.showRouteChoice.bind(this)});
+	var leg = response.routes[inIndex].legs[0];
+	this.toggleTopBar("directBoxResult", "<span style='color: gray'>From: </span>" + this.$.directionStart.getValue() + "<br><span style='color: gray'>To: </span>" + this.$.directionEnd.getValue() + "<br>" + leg.distance.text + "; " + leg.duration.text);
+},
+
+routeSelect: function(inSender, inEvent) {
+	this.showRouteChoice(inEvent.index, false);
 },
 
 bookmarkSelect: function (inSender, inEvent) {

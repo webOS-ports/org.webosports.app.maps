@@ -194,6 +194,42 @@ async function waitFor(page, fn, timeout = 20000, arg) {
 	await page.evaluate(`${mainView}.directStepGo({step: 1})`);
 	check('osm: step forward moves step marker', await page.evaluate(`${mainView}.directStepMarker.step === 1`));
 
+	// route alternatives: choose one in the panel or on the map
+	await page.evaluate(`(function(v){ v.clearMap(); v.$.getDirectButton.setDisabled(false); v.directRequest.origin = mapEngine.latLng(52.3791, 4.9003); v.directRequest.destination = mapEngine.latLng(52.0907, 5.1214); v.directRequest.travelMode = "DRIVING"; v.calcRoute(); })(${mainView})`);
+	await waitFor(page, `mapEngine.routeLayer && ${mainView}.directResponse`, 30000);
+	const routeCount = await page.evaluate(`${mainView}.directResponse.routes.length`);
+	check('osm: alternatives requested by default', await page.evaluate(`${mainView}.directRequest.provideRouteAlternatives === true && ${mainView}.$.pullout.$.routeAlternativesToggle.getValue() === true`));
+	if (routeCount > 1) {
+		const state = `(function(v){ var p = v.$.pullout; var r = v.directResponse.routes; return {
+			index: v.routeIndex,
+			buttons: p.$.routeChoices.getClientControls().length,
+			active: p.$.routeChoices.getClientControls().map(function(b){ return b.hasClass("onyx-blue"); }).indexOf(true),
+			stepsMatch: p.route === r[v.routeIndex].legs[0].steps,
+			summary: v.$.directResultsBar.content.indexOf(r[v.routeIndex].legs[0].duration.text) >= 0,
+			alternativesDrawn: mapEngine.alternativeLayers.length,
+			drawnIsChosen: mapEngine.routeLayer.getLatLngs().length == r[v.routeIndex].path.length
+		}; })(${mainView})`;
+		await sleep(1500);
+		check('osm: a new route opens as an overview', await page.evaluate(`mapEngine.map.getBounds().pad(0.05).contains(mapEngine.routeLayer.getBounds())`), await page.evaluate('[mapEngine.getZoom(), mapEngine.map.getZoom()]'));
+		check('osm: the zoom the engine reports is the map zoom after fitting a route', await page.evaluate('mapEngine.getZoom() === mapEngine.map.getZoom()'), await page.evaluate('[mapEngine.getZoom(), mapEngine.map.getZoom()]'));
+		const first = await page.evaluate(state);
+		check('osm: one choice per route, the first active', first.buttons === routeCount && first.active === 0 && first.index === 0 && first.stepsMatch && first.drawnIsChosen && first.alternativesDrawn === routeCount - 1, first);
+		await page.evaluate(`${mainView}.$.pullout.routeChoiceTap(${mainView}.$.pullout.$.routeChoices.getClientControls()[1])`);
+		const second = await page.evaluate(state);
+		check('osm: choosing route 2 in the panel switches steps, summary and map', second.index === 1 && second.active === 1 && second.stepsMatch && second.summary && second.drawnIsChosen, second);
+		await page.evaluate(`${mainView}.$.pullout.$.directpanel.scrollToTop()`);
+		await sleep(500);
+		await shot(page, '/osm-11-alternatives.png');
+		await page.evaluate(`mapEngine.alternativeLayers[0].fire("click")`);
+		const back = await page.evaluate(state);
+		check('osm: tapping the other route on the map chooses it', back.index === 0 && back.active === 0 && back.stepsMatch, back);
+		await page.evaluate(`${mainView}.clearMap()`);
+		check('osm: clearing removes the choices', await page.evaluate(`!${mainView}.$.pullout.$.routeChoices.showing && mapEngine.alternativeLayers.length === 0 && !${mainView}.directResponse`));
+	} else {
+		console.log('INFO the router offered one route Amsterdam - Utrecht, alternatives not checked');
+		await page.evaluate(`${mainView}.clearMap()`);
+	}
+
 	// unsupported travel mode reports instead of throwing
 	await page.evaluate(`(function(v){ v.$.infoDialog.hide(); v.directRequest.travelMode = "TRANSIT"; v.calcRoute(); })(${mainView})`);
 	check('osm: TRANSIT shows info dialog', await waitFor(page, `${mainView}.$.infoDialog.showing`, 5000), await page.evaluate(`${mainView}.$.infoDialogContent.content`));

@@ -720,3 +720,17 @@ background-size: 100% 3600%;
 	display: block;
 	margin: 4px auto;
 }
+
+/* route alternatives in the directions panel */
+.route-choices {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	padding: 4px;
+}
+
+.route-choices .route-choice {
+	margin: 3px;
+	font-size: 14px;
+	padding: 4px 8px;
+}

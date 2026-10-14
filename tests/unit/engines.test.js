@@ -237,3 +237,20 @@ test('offline tile cache only takes tile requests of the offered servers', () =>
 		assert.ok(!context.isTile(url), url);
 	}
 });
+
+test('OSRM alternatives become separate routes, each with its own summary and steps', () => {
+	const c = loadEngines();
+	const data = osrmResponse();
+	const second = JSON.parse(JSON.stringify(data.routes[0]));
+	second.distance = 6100;
+	second.duration = 900;
+	second.legs[0].steps = second.legs[0].steps.slice(0, 3);
+	second.geometry.coordinates = [[4.9003, 52.3791], [4.87, 52.36]];
+	data.routes.push(second);
+	const routes = c.MapEngines.create('osm').directionsFromOsrm(data).routes;
+	assert.strictEqual(routes.length, 2);
+	assert.deepStrictEqual(Array.from(routes, (r) => r.legs[0].duration.text), ['12 min', '15 min']);
+	assert.deepStrictEqual(Array.from(routes, (r) => r.legs[0].distance.text), ['4.9 km', '6.1 km']);
+	assert.deepStrictEqual(Array.from(routes, (r) => r.legs[0].steps.length), [7, 3]);
+	assert.deepStrictEqual(Array.from(routes[1].path[1]), [52.36, 4.87]);
+});

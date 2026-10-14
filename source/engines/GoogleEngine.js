@@ -275,8 +275,9 @@ MapEngines.register("google", MapEngines.extend({
 			}
 		});
 	},
-	showRoute: function (inResponse) {
+	showRoute: function (inResponse, inIndex) {
 		this.directionsDisplay.setDirections(inResponse);
+		this.directionsDisplay.setRouteIndex(inIndex || 0);
 		this.directionsDisplay.setMap(this.map);
 	},
 	clearRoute: function () {

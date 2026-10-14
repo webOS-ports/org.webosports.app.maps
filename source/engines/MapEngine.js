@@ -215,7 +215,8 @@ MapEngines.Base.prototype = {
 	reverseGeocode: function (inLatLng, inCallback) { inCallback("Not supported"); },
 	/* inRequest: {origin, destination, travelMode, provideRouteAlternatives, avoidTolls, avoidHighways}; inCallback(error, response) */
 	route: function (inRequest, inCallback) { inCallback("Not supported"); },
-	showRoute: function (inResponse) {},
+	/* draws route inIndex of inResponse; inOptions: {fit: fit the view to it, onSelect(index): the user picked another route on the map} */
+	showRoute: function (inResponse, inIndex, inOptions) {},
 	clearRoute: function () {},
 	/* inCallback(error, meters) */
 	elevation: function (inLatLng, inCallback) { inCallback("Not supported"); },
