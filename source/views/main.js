@@ -5,7 +5,7 @@ enyo.kind({
 	components: [
 		{kind: "Signals", onload: "load", onunload: "cleanup"},
 		{kind: "Signals", name: "keyDownSignal", onkeydown: "handleKeyDown"},
-		{kind: "enyo.Signals", onbackbutton: "handleBackGesture"},
+		{kind: "enyo.Signals", onbackbutton: "handleBackGesture", onrelaunch: "handleRelaunch"},
 		{name: "general", components: [
 		{kind: "FittableRows", name: "layout", classes: "zoom-pre3", components: [
 			{name: "mainPane", kind: "onyx.Toolbar", classes: "toolbar-main", layoutKind: 'FittableColumnsLayout', components: [
@@ -23,6 +23,7 @@ enyo.kind({
 							//{kind: "onyx.Icon", classes: "direction-img", src: "assets/flagA.png"},
 							{name: "directionStart", what: "origin", selectOnFocus: true, fit: true, classes: "truncating-text search-input", kind: "onyx.Input", placeholder: "Starting Location", onfocus: "bindAutocompleter"}
 						]},
+						{kind: "onyx.IconButton", name: "swapDirections", src: "assets/menu-icon-swap.png", ontap: "swapDirections"},
 						{kind:"onyx.Button", content: "Close", classes: "onyx-dark direct-button", ontap: "toggleSearchDirections"}
 					]},
 					//{tag: "br", classes: "inline-wide-screens"},
@@ -78,6 +79,9 @@ enyo.kind({
 			{classes: "onyx-menu-divider"},
 			{kind: "onyx.Icon", name: "streetMenuIcon", classes: "marker-popup-menu-icon", src: "assets/streetview-icon.png"},
 			{name: "markerStreet", classes: "marker-popup-menu-item", content: $L('Street View'), ontap: "onMarkerStreet"},
+			{name: "markerStreetDivider", classes: "onyx-menu-divider"},
+			{kind: "onyx.Icon", classes: "marker-popup-menu-icon", src: "assets/star-orange.png"},
+			{name: "markerSave", classes: "marker-popup-menu-item", content: $L('Save place'), ontap: "toggleSavePlace"},
 			{classes: "onyx-menu-divider"},
 			{kind: "onyx.Icon", classes: "marker-popup-menu-icon", src: "assets/flagA.png"},
 			{name: "markerStart", classes: "marker-popup-menu-item", content: $L('Route from here'), ontap: "routeFromTo"},
@@ -102,6 +106,10 @@ enyo.kind({
 			{kind: "onyx.IconButton", name: "zoomIn", value: 1, classes: "button-bottom", src: "assets/zoomin.png", ontap: "setZoomS"},
 			{kind: "onyx.IconButton", name: "zoomOut", value: -1, classes: "button-bottom", src: "assets/zoomout.png", ontap: "setZoomS"}
 		]},
+		{name: "mapZoomButtons", classes: "map-zoom-buttons onyx-toolbar zoom-pre3", components: [
+			{kind: "onyx.IconButton", name: "mapZoomIn", value: 1, src: "assets/zoomin.png", ontap: "setZoom"},
+			{kind: "onyx.IconButton", name: "mapZoomOut", value: -1, src: "assets/zoomout.png", ontap: "setZoom"}
+		]},
 		{name: "bottomLeftButtons", showing: true, classes: "bottom-left-buttons onyx-toolbar zoom-pre3", components: [
 			//{kind: "onyx.IconButton", name: "myLocation", classes: "button-bottom", src: "assets/menu-icon-mylocation.png", ontap: "goCurrentLocation"}
 			{kind: "onyx.Grabber", ontap: "togglePullout", ondragstart: "togglePullout"}
@@ -115,6 +123,9 @@ enyo.kind({
 			onCacheOSM: "cacheOSM", 
 			onBookmarkSelect: "bookmarkSelect",
 			onLanguageChange: "langChange",
+			onEngineChange: "engineChange",
+			onSavedSelect: "showSavedPlace",
+			onUnitsChange: "unitsChange",
 			onDirectOptions: "directOptions",
 			onFillDirectField: "fillDirectField",
 			onSetDirectStep: "setDirectStep",
@@ -174,7 +185,12 @@ create: function(){
 	/* Assign on-screen keyboard to main input */
 	//this.$.keyboard.write = this.$.searchLocation;
 	
-	this.$.initText.setContent("Loading Google Maps API...");
+	this.$.initText.setContent("Loading " + mapEngine.label + "...");
+
+	/* Hide what the engine does not support */
+	this.$.streetMenuIcon.setShowing(mapEngine.streetView);
+	this.$.markerStreet.setShowing(mapEngine.streetView);
+	this.$.markerStreetDivider.setShowing(mapEngine.streetView);
 	this.$.initPopUp.show();
 
 },
@@ -182,7 +198,7 @@ load: function() {
 
 	if (API) {
 			this.init();
-			console.log("*** API LOADED **** ", google.maps.version);
+			console.log("*** API LOADED **** ", mapEngine.versionText());
 		} else {
 			var errorLoadTimer = setTimeout((function(){
 				this.load();
@@ -192,9 +208,9 @@ load: function() {
 },
 cleanup: function () {
 	
-	Prefs.lastPosLat = map.getCenter().lat();
-	Prefs.lastPosLng = map.getCenter().lng();
-	Prefs.lastZoom = map.getZoom();
+	Prefs.lastPosLat = mapEngine.getCenter().lat();
+	Prefs.lastPosLng = mapEngine.getCenter().lng();
+	Prefs.lastZoom = mapEngine.getZoom();
 	this.savePrefs();
 	
 	if(enyo.platform.webos) {
@@ -231,23 +247,14 @@ init: function(){
 	}
 	};
 
-	this.$.pullout.$.APIver.setContent("<span style='color: gray; font-size: 12px'>Google Maps API: v" + google.maps.version + "</span>");
+	this.$.pullout.$.APIver.setContent("<span style='color: gray; font-size: 12px'>" + mapEngine.versionText() + "</span>");
 	this.$.initText.setContent("Initializing map...");
 	
-	var mapOptions = {
+	mapEngine.createMap(this.$.mapdiv.hasNode(), {
 		zoom: Prefs.lastZoom,
-		center: new google.maps.LatLng(Prefs.lastPosLat, Prefs.lastPosLng),
-		disableDefaultUI: true,
-		streetViewControl: false,
-		draggable: false,
-		mapTypeId: google.maps.MapTypeId.ROADMAP
-	};
-	
-	/* Set mapType from preferences */	
-	mapOptions.mapTypeId = this.getMapOptions(Prefs).mapTypeId;
-	
-	map = new google.maps.Map(document.getElementById('map_canvas'),mapOptions);
-	new google.maps.event.addListenerOnce(map, 'idle', this.initAfterIdle.bind(this));
+		center: mapEngine.latLng(Prefs.lastPosLat, Prefs.lastPosLng),
+		mapType: Prefs.mapType
+	}, this.initAfterIdle.bind(this));
 	
 },
 initAfterIdle: function() {
@@ -295,42 +302,27 @@ initAfterIdle: function() {
 	this.compassContainer.id = 'compass';
 	this.needleContainer = document.createElement("div");
 	this.needleContainer.id = 'needle';
-	map.getDiv().firstChild.firstChild.appendChild(this.compassContainer);
+	mapEngine.getOverlayContainer().appendChild(this.compassContainer);
 	document.getElementById("compass").appendChild(this.needleContainer);
 	*/
 
 	this.initMainSearch();
 
-	this.initCustomMapTypes();
-
 	/* Show the layers enabled in preferences */
-	if (Prefs.layers.traffic) this.showTraffic(null, {value: true});
-	if (Prefs.layers.transit) this.showTransit(null, {value: true});
-	if (Prefs.layers.bike) this.showBicycling(null, {value: true});
+	if (Prefs.layers.traffic && mapEngine.layers.traffic) this.showTraffic(null, {value: true});
+	if (Prefs.layers.transit && mapEngine.layers.transit) this.showTransit(null, {value: true});
+	if (Prefs.layers.bike && mapEngine.layers.bike) this.showBicycling(null, {value: true});
 
 	/* init others */
 	this.setupDirectionService();
-
-	/* create an ElevationService */
-	elevator = new google.maps.ElevationService();
-	
-	var clustererStyle = [{
-        url: 'assets/lune-marker-red-64-64-cluster.png',
-        height: 64,
-        width: 64,
-        anchor: [64, 64],
-        textColor: "black",
-        textSize: 24
-      }];
-	
-	this.markerCluster = new MarkerClusterer(map, markers, {
-          styles: clustererStyle
-        });
 	
 	enyo.log("************ INIT DONE ************ ");
 	
 	this.$.initPopUp.hide();
 	this.findCurrentLocation();
+
+	/* address or route handed over by another app (maploc:, mapto:, geo:) */
+	this.handleLaunchParams(this.getLaunchParams());
 	
 	
 	/* 
@@ -352,14 +344,15 @@ initAfterIdle: function() {
 	
 	
 	
-	new google.maps.event.addListener(map, 'idle', this.mapIdle.bind(this));
-	new google.maps.event.addListener(map, 'bounds_changed', this.mapBoundsChanged.bind(this));
+	mapEngine.on('idle', this.mapIdle.bind(this));
+	mapEngine.on('bounds_changed', this.mapBoundsChanged.bind(this));
 },
 initMainSearch: function(inSender, inEvent) {
-	/* setup google SearchBox for main search */
-	this.MainAutocomplete = new google.maps.places.SearchBox(this.$.searchLocation.node);
-	this.MainAutocomplete.bindTo('bounds', map);
-	new google.maps.event.addListener(this.MainAutocomplete, 'places_changed', this.SelectedAutocomplete.bind(this));
+	/* run the engine's place search from the main search box */
+	mapEngine.attachSearch(this.$.searchLocation.hasNode(), this.SelectedAutocomplete.bind(this), this.searchFailed.bind(this));
+},
+searchFailed: function(inMessage) {
+	this.statusPanel($L("Search failed: ") + inMessage, 5);
 },
 savePrefs: function (inSender, inEvent) {
 
@@ -367,31 +360,32 @@ savePrefs: function (inSender, inEvent) {
 		Prefs = enyo.mixin(Prefs, inEvent.prefs);
 	} catch (e) {};
 
-	enyo.setCookie("mapsAppPrefs", enyo.json.stringify(Prefs));
+	PrefsStore.save(Prefs);
 },
-SelectedAutocomplete: function(inSender, inEvent) {
+SelectedAutocomplete: function(places) {
 
 	this.$.layout.rendered();
 	this.$.keyDownSignal.onkeydown = "handleKeyDown";
-	var places = this.MainAutocomplete.getPlaces();
 	this.$.searchLocation.place = places[0];
 	this.PlaceMarker(places);
 	
 },
 setZoom: function (inSender, inEvent) {
-	map.setZoom(map.getZoom() + inSender.value);
+	mapEngine.setZoom(mapEngine.getZoom() + inSender.value);
 },
 setZoomS: function (inSender, inEvent) {
 	this.panorama.setPov({ heading: this.panorama.getPov().heading, pitch: this.panorama.getPov().pitch, zoom: this.panorama.getPov().zoom + inSender.value });	
 },
 PlaceMarker: function (places) {
 
-	var bounds = new google.maps.LatLngBounds();
+	var locations = [];
+	var marker;
 	var imageUrl = "assets/lune-marker-red-64-64.png";
 	var size = 64*window.devicePixelRatio;
 	
 	for (var i = 0, place; place = places[i]; i++) {
 
+		imageUrl = "assets/lune-marker-red-64-64.png";
 		if (place.lunetype) {
 			switch (place.lunetype){
 			  case "current":
@@ -405,35 +399,27 @@ PlaceMarker: function (places) {
 				break;
 			};
 		};
-		var image = {
-			url: imageUrl,
-			size: new google.maps.Size(size, size),
-			origin: new google.maps.Point(0, 0),
-			anchor: new google.maps.Point(size/2, size),
-			scaledSize: new google.maps.Size(size, size)
-		};
-		
 		// Create a marker for each place.
-		var marker = new google.maps.Marker({
-			map: map,
-			icon: image,
+		marker = mapEngine.addMarker({
+			iconUrl: imageUrl,
+			size: size,
+			anchor: "bottom",
 			title: place.name,
 			optimized: this.optimizedMarkers,
 			position: place.geometry.location
 		});
 		
-		place.distance = google.maps.geometry.spherical.computeDistanceBetween(map.getCenter(), place.geometry.location);
+		place.distance = mapEngine.distance(mapEngine.getCenter(), place.geometry.location);
 
 		marker.place = place;
 		markers.push(marker);
-		google.maps.event.addListener(marker,"click",this.MarkerClick.bind(this, marker));
+		marker.onClick(this.MarkerClick.bind(this, marker));
 
-		bounds.extend(place.geometry.location);
+		locations.push(place.geometry.location);
 	};
 
 	this.$.pullout.setSearchData(markers);
-	this.markerCluster.clearMarkers()
-	this.markerCluster.addMarkers(markers);
+	mapEngine.updateMarkers(markers);
 
 	/* Open pullout with results for more than one place result for wide screens */
 	if ((places.length > 1)) {
@@ -442,16 +428,16 @@ PlaceMarker: function (places) {
 			this.$.pullout.togglePlaces({panel: "currentlist"},{name: "current"});
 			this.$.bookmarkRadio.setActive(true);
 		};
-		map.fitBounds(bounds);
+		mapEngine.fitLatLngs(locations);
 	} else if (places.length == 1) {
 		this.MarkerClick(marker);
 		if (places[0].lunetype != "dropped") {
 			if (places[0].geometry.viewport) {
-				map.fitBounds(places[0].geometry.viewport);
+				mapEngine.fitViewport(places[0].geometry.viewport);
 			} else {
 				
-				map.panTo(places[0].geometry.location);
-				map.setZoom(14);
+				mapEngine.panTo(places[0].geometry.location);
+				mapEngine.setZoom(14);
 			
 			};
 		};
@@ -467,7 +453,6 @@ PlaceMarker: function (places) {
 MarkerClick: function (marker) {
 
 	var place = marker.place;
-	var pixel = this.fromLatLngToPixel(place.geometry.location);
 
 	if (place.lunetype == "mylocation") {
 		var date = new ilib.Date();
@@ -481,7 +466,7 @@ MarkerClick: function (marker) {
 	if (place.photos) {
 				this.$.popIcon.setSrc(place.photos[0].getUrl({'maxWidth': 100, 'maxHeight': 100}));
 			} else {
-				this.$.popIcon.setSrc(marker.icon.url);
+				this.$.popIcon.setSrc(marker.iconUrl);
 			};
 
 	if (place.rating) {
@@ -526,48 +511,14 @@ mapTypeSelect: function(inSender, inEvent) {
 	var suffix = inEvent.isRetina ? (Prefs.retina ? "_HDPI" : "") : "";
 	inEvent.mapType = inEvent.mapType + suffix;
 
-	var mapOptions = this.getMapOptions(inEvent);
-
 	Prefs.mapType = inEvent.mapType;
 	this.savePrefs();
 
-	map.setOptions(mapOptions);
-},
-
-getMapOptions: function(inEvent) {
-	
-	var mapOptions = {};
-	
-	switch (inEvent.mapType) {
-		default:
-			mapOptions.mapTypeId = inEvent.mapType;
-			break;
-		case "OSM":
-			if(Prefs.OSMMapCache) {
-				mapOptions.mapTypeId = "OSMCached";
-			} else {
-				mapOptions.mapTypeId = "OSM";
-			};
-			break;
-		case "ROADMAP":
-			mapOptions.mapTypeId = google.maps.MapTypeId.ROADMAP;
-			break;
-		case "SATELLITE":
-			mapOptions.mapTypeId = google.maps.MapTypeId.SATELLITE
-			break;
-		case "HYBRID":
-			mapOptions.mapTypeId = google.maps.MapTypeId.HYBRID
-			break;
-		case "TERRAIN":
-			mapOptions.mapTypeId = google.maps.MapTypeId.TERRAIN
-			break;
-	};
-	
-	return mapOptions;
+	mapEngine.setMapType(inEvent.mapType);
 },
 resizeHandler: function() {
 	enyo.log("window size changed");
-	//google.maps.event.trigger(map, "resize");
+	//mapEngine.resize();
 },
 togglePullout: function(inSender) {
 
@@ -600,22 +551,22 @@ toggleSearchDirections: function(inSender, inEvent) {
 
 	this.$.layout.rendered();
 
-	google.maps.event.trigger(map, "resize");
+	mapEngine.resize();
 
 },
 
 showTraffic: function(inSender, inEvent) {
-	map.overlayMapTypes.setAt(0, inEvent.value ? this.trafficMapType : null);
+	mapEngine.setLayer("traffic", inEvent.value);
 	Prefs.layers.traffic = inEvent.value;
 	this.savePrefs();
 },
 showTransit: function(inSender, inEvent) {
-	map.overlayMapTypes.setAt(1, inEvent.value ? this.transitMapType : null);
+	mapEngine.setLayer("transit", inEvent.value);
 	Prefs.layers.transit = inEvent.value;
 	this.savePrefs();
 },
 showBicycling: function (inSender, inEvent){
-	bikeLayer.setMap(inEvent.value ? map : null);
+	mapEngine.setLayer("bike", inEvent.value);
 	Prefs.layers.bike = inEvent.value;
 	this.savePrefs();
 },
@@ -630,40 +581,32 @@ goCurrentLocation: function (inSender, inEvent) {
 	this.trackPosition = inSender.getValue();
 	
 	//inSender.addRemoveClass("tracking", true);
-	map.fitBounds(this.circle.getBounds());
-	if (map.getZoom() > 14 ) map.setZoom(14);
+	mapEngine.fitCircle(this.circle);
+	if (mapEngine.getZoom() > 14 ) mapEngine.setZoom(14);
 },
 
 firstLocationSuccess: function(inSender, inData) {
 	
-	currentPos = new google.maps.LatLng(inData.coords.latitude, inData.coords.longitude);
+	currentPos = mapEngine.latLng(inData.coords.latitude, inData.coords.longitude);
 	
 		var size = 42*window.devicePixelRatio;
 		
 		this.statusPanel("Current location found...", 3);
 		
-		if (enyo.platform.webos) map.getDiv().firstChild.firstChild.appendChild(this.compassContainer);
+		if (enyo.platform.webos) mapEngine.getOverlayContainer().appendChild(this.compassContainer);
 		
-		var image = {
-			url: "assets/enyo-map-marker_blue_dot.png",
-			size: new google.maps.Size(size, size),
-			origin: new google.maps.Point(0, 0),
-			anchor: new google.maps.Point(size/2, size/2)
-			//scaledSize: new google.maps.Size(size, size)
-		  };
-		
-		this.myLocationMarker = new google.maps.Marker({
+		this.myLocationMarker = mapEngine.addMarker({
 			position: currentPos,
-			map: map,
-			//zIndex: 999999,
-			optimized: this.optimizedMarkers,
-			icon: image
+			iconUrl: "assets/enyo-map-marker_blue_dot.png",
+			size: size,
+			anchor: "center",
+			optimized: this.optimizedMarkers
 		});
 
 		this.myLocationMarker.place = [];
 		this.myLocationMarker.place.geometry = [];
 		this.myLocationMarker.place.name = $L("My Location");
-		this.myLocationMarker.place.icon = image.url;
+		this.myLocationMarker.place.icon = this.myLocationMarker.iconUrl;
 		this.myLocationMarker.place.lunetype = "mylocation";
 		this.myLocationMarker.place.id = Date.now();
 		this.myLocationMarker.place.geometry.location = currentPos;
@@ -683,22 +626,13 @@ firstLocationSuccess: function(inSender, inData) {
 		this.accuracy = 350;
 		if (inData.coords.accuracy) this.accuracy = inData.coords.accuracy;
 
-			this.circle = new google.maps.Circle({
+			this.circle = mapEngine.addCircle({
 				center: currentPos,
-				radius: this.accuracy, //radius in meters
-				map: map,
-				optimized: true,
-				fillColor: "#60bbe5",
-				fillOpacity: 0.1,
-				strokeColor: "#60bbe5",
-				strokeOpacity: 0.4,
-				strokeWeight: 1
+				radius: this.accuracy //radius in meters
 			});
 
-		/* Bind the accuracy circle */
-		this.circle.bindTo('center', this.myLocationMarker, 'position');
-		map.fitBounds(this.circle.getBounds());
-		if (map.getZoom() > 14 ) map.setZoom(14);
+		mapEngine.fitCircle(this.circle);
+		if (mapEngine.getZoom() > 14 ) mapEngine.setZoom(14);
 		
 		/* Start tracking after first (not so precise as tracking) location succes */
 		this.startTracking();
@@ -707,17 +641,24 @@ firstLocationSuccess: function(inSender, inData) {
 	
 	this.$[this.locationMethod].onSuccess = "trackingLocationSuccess";
 	
-	google.maps.event.addListener(this.myLocationMarker,"click",this.MarkerClick.bind(this, this.myLocationMarker));
+	if (this.pendingRouteTo) {
+		var destination = this.pendingRouteTo;
+		this.pendingRouteTo = null;
+		this.routeToPlace(destination);
+	};
+	
+	this.myLocationMarker.onClick(this.MarkerClick.bind(this, this.myLocationMarker));
 
 },
 
 trackingLocationSuccess: function(inSender, inData) {
-	currentPos = new google.maps.LatLng(inData.coords.latitude, inData.coords.longitude);
-	if (this.trackPosition) map.setCenter(currentPos);
+	currentPos = mapEngine.latLng(inData.coords.latitude, inData.coords.longitude);
+	if (this.trackPosition) mapEngine.setCenter(currentPos);
 	this.myLocationMarker.place.geometry.location = currentPos;
 	this.myLocationMarker.place.lastfix = new ilib.Date();	
 	this.myLocationMarker.place.formatted_address = currentPos;
 	this.myLocationMarker.setPosition(currentPos);
+	this.circle.setCenter(currentPos);
 	this.circle.setRadius(inData.coords.accuracy); // update accuracy circle
 	this.updateCompassPosition(currentPos);
 },
@@ -734,14 +675,14 @@ pulseDot: function (latlng) {
 	if (!document.getElementById("pulse")) {
 			
 			try {
-			map.getDiv().firstChild.firstChild.appendChild(this.pulseContainer);
+			mapEngine.getOverlayContainer().appendChild(this.pulseContainer);
 		} catch (e) {
 			enyo.log("Map not loaded yet...");
 			};
 		
 	} else {
 	
-		var coord = this.fromLatLngToPixel(latlng);
+		var coord = mapEngine.latLngToContainerPoint(latlng);
 		
 		coord.x = Math.round(coord.x-25);
 		coord.y = Math.round(coord.y-25);
@@ -759,14 +700,21 @@ pulseDot: function (latlng) {
 	
 },
 
+/*
+ * The gesture handlers below pan and zoom engines that do not handle touch
+ * themselves (Google, created with draggable: false). Engines with
+ * nativeGestures, like Leaflet, get the events untouched.
+ */
 gestureStart: function(inSender, e){
 	
-	new google.maps.event.addListenerOnce(map, 'bounds_changed', this.MapCenterChanged.bind(this));
+	if (mapEngine.nativeGestures) return;
+	
+	mapEngine.once('bounds_changed', this.MapCenterChanged.bind(this));
 	
 	this.gestureinprogress = true;
-	this.GestureCenter = map.getCenter();	
+	this.GestureCenter = mapEngine.getCenter();	
 	this.Zooming = true;
-	this.previouszoom = map.getZoom();
+	this.previouszoom = mapEngine.getZoom();
 	this.z = this.previouszoom;
 	this.previousScale = e.scale;
 	this.previousS = 0;
@@ -781,18 +729,19 @@ gestureStart: function(inSender, e){
 	}
 	this.oldeventg = e;
 	
-	this.TilesContainer = map.getDiv().firstChild.firstChild;
+	this.TilesContainer = mapEngine.getPanContainer();
 	this.TilesContainer.style.overflow = "visible !important;";
 
 	this.addpaneventg = [];
 	this.addpaneventg.cx = 0;
 	this.addpaneventg.cy = 0;
-	this.addpaneventg.oldcenter = this.fromLatLngToPixel(map.getCenter());
+	this.addpaneventg.oldcenter = mapEngine.latLngToContainerPoint(mapEngine.getCenter());
 
 },
 
 gestureChange: function(inSender, e){
 	
+		if (mapEngine.nativeGestures) return;
 		
 		/* ToDo: map rotate upon gesture works... needs to be more tested */
 		//var rotation = 0;
@@ -837,29 +786,34 @@ gestureChange: function(inSender, e){
 
 },
 gestureEnd: function(inSender, e){
+	if (mapEngine.nativeGestures) return;
 	this.gestureinprogress = false;
 	
-	map.setZoom(this.z);
+	mapEngine.setZoom(this.z);
 	
-	var point = new google.maps.Point(this.addpaneventg.cx, this.addpaneventg.cy);
-	var latlng = this.fromPixelToLatLng(point);
-	map.setCenter(latlng);
+	var latlng = mapEngine.containerPointToLatLng({x: this.addpaneventg.cx, y: this.addpaneventg.cy});
+	mapEngine.setCenter(latlng);
 	
 },
 
 dragStart: function(inSender, inEvent) {
 	
+	if (mapEngine.nativeGestures) {
+		this.$.markerPopup.hide();
+		return;
+	}
+
 	if(!this.gestureinprogress) {
 		this.$.markerPopup.hide();
 	
-		new google.maps.event.addListenerOnce(map, 'bounds_changed', this.MapCenterChanged.bind(this));
+		mapEngine.once('bounds_changed', this.MapCenterChanged.bind(this));
 	
 		inEvent.preventDefault();
 	
-		this.TilesContainer = map.getDiv().firstChild.firstChild;
+		this.TilesContainer = mapEngine.getPanContainer();
 		this.TilesContainer.style.overflow = "visible";
 	
-		this.oldcenter = this.fromLatLngToPixel(map.getCenter());
+		this.oldcenter = mapEngine.latLngToContainerPoint(mapEngine.getCenter());
 		this.wasflicked = false;	
 	}
 	
@@ -867,7 +821,7 @@ dragStart: function(inSender, inEvent) {
 
 dragging: function(inSender, inEvent) {
 
-	if(!this.gestureinprogress) {
+	if(!mapEngine.nativeGestures && !this.gestureinprogress) {
 		this.moveMapBy(inEvent.dx, inEvent.dy);
 		this.draggingEvent = inEvent;
 	}
@@ -881,7 +835,7 @@ moveMapBy: function(x,y,deg) {
 
 dragEnd: function(inSender, inEvent){
 	
-	if (!this.wasflicked && !this.gestureinprogress) {
+	if (!mapEngine.nativeGestures && !this.wasflicked && !this.gestureinprogress) {
 		this.mapEndMove(inEvent);
 	};
 
@@ -889,7 +843,7 @@ dragEnd: function(inSender, inEvent){
 
 flick: function(inSender, inEvent) {
 
-	if(!this.gestureinprogress) {
+	if(!mapEngine.nativeGestures && !this.gestureinprogress) {
 		this.wasflicked = true;
 		
 		var transTime = Math.sqrt(inEvent.xVelocity*inEvent.xVelocity + inEvent.yVelocity*inEvent.yVelocity)*400;
@@ -913,10 +867,10 @@ flick: function(inSender, inEvent) {
 
 mapEndMove: function(inEvent) {
 	
-	var point = new google.maps.Point(this.oldcenter.x-inEvent.dx, this.oldcenter.y-inEvent.dy);
+	var point = {x: this.oldcenter.x-inEvent.dx, y: this.oldcenter.y-inEvent.dy};
 	this.residuePos = inEvent;
 
-	map.setCenter( this.fromPixelToLatLng(point) );
+	mapEngine.setCenter( mapEngine.containerPointToLatLng(point) );
 
 },
 
@@ -931,41 +885,6 @@ MapCenterChanged: function () {
 
 },
 
-fromLatLngToPixel: function (position) {
-	var scale = Math.pow(2, map.getZoom());
-	var proj = map.getProjection();
-	var bounds = map.getBounds();
-
-	var nw = proj.fromLatLngToPoint(
-	new google.maps.LatLng(
-		bounds.getNorthEast().lat(),
-		bounds.getSouthWest().lng()
-	));
-	var point = proj.fromLatLngToPoint(position);
-
-	return new google.maps.Point(
-		Math.floor((point.x - nw.x) * scale),
-		Math.floor((point.y - nw.y) * scale));
-},
-
-fromPixelToLatLng: function (pixel) {
-	var scale = Math.pow(2, map.getZoom());
-	var proj = map.getProjection();
-	var bounds = map.getBounds();
-
-	var nw = proj.fromLatLngToPoint(
-	new google.maps.LatLng(
-		bounds.getNorthEast().lat(),
-		bounds.getSouthWest().lng()
-	));
-	var point = new google.maps.Point();
-
-	point.x = pixel.x / scale + nw.x;
-	point.y = pixel.y / scale + nw.y;
-
-	return proj.fromPointToLatLng(point);
-},
-
 clearMap: function (inSender, inEvent) {
 	
 	this.clearMarkers();
@@ -974,10 +893,10 @@ clearMap: function (inSender, inEvent) {
 	this.$.searchLocation.place = null;
 	
 	/* Clear directions */
-	this.directionsDisplay.setMap(null);
+	mapEngine.clearRoute();
 	this.$.getDirectButton.setDisabled(false);	
 	this.$.searchBox.setShowing(false);
-	if (this.directStepMarker) this.directStepMarker.setMap(null);
+	if (this.directStepMarker) this.directStepMarker.remove();
 	this.directStepMarker = null;
 	this.$.directPopup.hide();
 	this.$.directionStart.setValue("");
@@ -995,21 +914,19 @@ clearMap: function (inSender, inEvent) {
 
 clearMarkers: function (inSender, inEvent) {
 	
-	// Clear the cluster
-	if (this.markerCluster) {
-		this.markerCluster.clearMarkers();
-	};
-	
-	for (e=0; e<markers.length; e++){
-		markers[e].setMap(null);
+	for (var e=0; e<markers.length; e++){
+		markers[e].remove();
 	}
 	
 	markers = [];
 	
 	if (this.myLocationMarker) { 
 		markers.push(this.myLocationMarker);
-		this.myLocationMarker.setMap(map);
+		this.myLocationMarker.restore();
 	};
+	
+	// Re-cluster what is left
+	mapEngine.updateMarkers(markers);
 	
 	this.$.pullout.setSearchData(markers);
 
@@ -1037,11 +954,20 @@ langChange: function (inSedner, inEvent) {
 	Prefs.lang = inEvent.value;
 	this.savePrefs();
 },
+engineChange: function (inSender, inEvent) {
+	/* each engine loads its own API, so restart with the new one */
+	Prefs.engine = inEvent.value;
+	this.cleanup();
+	window.location.reload();
+},
 handleKeyDown: function(inSender, inEvent) {
 	
 		this.$.markerPopup.hide();
 		this.$.markerPopupMenu.hide();
 		if (inEvent.keyIdentifier == "Back") return;
+		/* already typing into a field, don't steal the key */
+		var active = document.activeElement;
+		if (active && (active.tagName == "INPUT" || active.tagName == "TEXTAREA")) return;
 		inEvent.preventDefault();
 		this.$.pullout.closePullout();
 		this.$.searchLocation.selectOnFocus = false;
@@ -1054,11 +980,9 @@ handleKeyDown: function(inSender, inEvent) {
 
 GeocodeFromLatLng: function(latlng) {
 	
-	geocoder = new google.maps.Geocoder();
-	
-	geocoder.geocode({'latLng': latlng}, function(results, status) {
-		if (status == google.maps.GeocoderStatus.OK) {
-		  var place = results[0];
+	mapEngine.reverseGeocode(latlng, function(status, result) {
+		if (!status) {
+		  var place = result;
 		  //force the result to have original coordinates
 		  place.geometry.location = latlng;
 		  place.name = "Dropped pin #" + this.droppedCount;
@@ -1087,28 +1011,15 @@ goStreetView: function(place) {
 	
 	this.$.streetdiv.show();
 	
-	var panoramaOptions = {
-				  position: place.geometry.location,
-				  visible: false,
-				  addressControl: true,
-				  linksControl: true,
-				  panControl: false,
-				  zoomControl: false,
-				  enableCloseButton: false,
-				  pov: {
-					heading: 34,
-					pitch: 10,
-					zoom: 1
-				  			}
-	};
-	
-	this.panorama = new  google.maps.StreetViewPanorama(document.getElementById("street_canvas"), panoramaOptions);
+	this.panorama = mapEngine.createPanorama(document.getElementById("street_canvas"), place.geometry.location);
 	
 	this.panorama.setVisible(true);
 	
 	this.$.bottomRightButtons.show();
 	
 	this.$.bottomLeftButtons.hide();
+	
+	this.$.mapZoomButtons.hide();
 	
 	this.$.mainPane.hide();
 	
@@ -1123,6 +1034,8 @@ exitStreetView: function() {
 	this.$.bottomRightButtons.hide();
 	
 	this.$.bottomLeftButtons.show();
+	
+	this.$.mapZoomButtons.show();
 	
 	this.$.mainPane.show();
 },
@@ -1145,221 +1058,8 @@ Sdragging: function(inSender, event) {
 	this.Soldy = event.clientY;
 
 },
-initCustomMapTypes: function () {
-	
-		map.mapTypes.set("ROADMAP_HDPI", new google.maps.ImageMapType({
-                getTileUrl: function(coord, zoom) {
-                    return "http://mts0.google.com/vt?lyrs=m@216000000,seconds_into_week:-1&x=" + coord.x + "&y=" + coord.y + "&z=" + zoom + "&style=2";
-                    //return "http://mts0.google.com/vt?hl=cs&src=app&lyrs=m@216000000,traffic|seconds_into_week:-1&x=" + coord.x + "&y=" + coord.y + "&z=" + zoom + "&style=2";
-                },
-                tileSize: new google.maps.Size(256, 256),
-				isPng: true,
-				maxZoom: 17,
-				name: "ROADMAP_HDPI"
-        }));
-        
-        map.mapTypes.set("TERRAIN_HDPI", new google.maps.ImageMapType({
-                getTileUrl: function(coord, zoom) {
-                    return "http://mts0.google.com/vt?lyrs=p@216000000,seconds_into_week:-1&x=" + coord.x + "&y=" + coord.y + "&z=" + zoom + "&style=2";
-                    //return "http://mts0.google.com/vt?hl=cs&src=app&lyrs=m@216000000,traffic|seconds_into_week:-1&x=" + coord.x + "&y=" + coord.y + "&z=" + zoom + "&style=2";
-                },
-                tileSize: new google.maps.Size(256, 256),
-				isPng: true,
-				maxZoom: 17,
-				name: "TERRAIN_HDPI"
-        }));
-        
-        map.mapTypes.set("HYBRID_HDPI", new google.maps.ImageMapType({
-                getTileUrl: function(coord, zoom) {
-                    return "http://mts0.google.com/vt?lyrs=y@216000000,seconds_into_week:-1&x=" + coord.x + "&y=" + coord.y + "&z=" + zoom + "&style=2";
-                    //return "http://mts0.google.com/vt?hl=cs&src=app&lyrs=m@216000000,traffic|seconds_into_week:-1&x=" + coord.x + "&y=" + coord.y + "&z=" + zoom + "&style=2";
-                },
-                tileSize: new google.maps.Size(256, 256),
-				isPng: true,
-				maxZoom: 17,
-				name: "HYBRID_HDPI"
-        }));
-        
-        map.mapTypes.set("OSM", new google.maps.ImageMapType({
-			
-                getTileUrl: function(coord, zoom) {
-						return "http://a.tile.openstreetmap.org/" + zoom + "/" + coord.x + "/" + coord.y + ".png";
-                },
-                tileSize: new google.maps.Size(256, 256),
-                isPng: true,
-                name: "OpenStreetMap",
-                credit: 'OpenStreetMap',
-                maxZoom: 18
-        }));
-        
-        OSMMapType.tileSize = new google.maps.Size(256, 256);
-        map.mapTypes.set("OSMCached", new OSMMapType(Prefs));
-
-        
-        map.mapTypes.set("NOKIA", new google.maps.ImageMapType({
-                getTileUrl: function(coord, zoom) {
-                    return "http://maptile.maps.svc.ovi.com/maptiler/maptile/newest/normal.day/" + zoom + "/" + coord.x + "/" + coord.y + "/256/png8";
-                },
-                tileSize: new google.maps.Size(256, 256),
-				isPng: true,
-				maxZoom: 17,
-				name: "NOKIA"
-        }));
-        
-        map.mapTypes.set("OCM", new google.maps.ImageMapType({
-            getTileUrl: function(coord, zoom) {
-            return "http://tile.opencyclemap.org/cycle/" + zoom + "/" + coord.x + "/" + coord.y + ".png";
-            },
-            tileSize: new google.maps.Size(256, 256),
-            name: "OpenCycleMap",
-            maxZoom: 18
-        }));
-        
-        map.mapTypes.set("Yandex", new google.maps.ImageMapType({
-            getTileUrl: function(coord, zoom) {
-                return "http://vec0"+((coord.x+coord.y)%5)+".maps.yandex.net/tiles?l=map&v=2.26.0&x=" + coord.x + "&y=" + coord.y + "&z=" + zoom;
-            },
-            tileSize: new google.maps.Size(256, 256),
-            name: "Yandex maps",
-            maxZoom: 18
-        }));
-        
-        map.mapTypes['Yandex'].projection = new YandexProjection(); 
-        
-        map.mapTypes.set("Bing", new google.maps.ImageMapType({
-			getTileUrl: function(coord, zoom) {
-				
-		    // http://ak.dynamic.t2.tiles.virtualearth.net/comp/ch/120212302122?mkt=en-us&it=G,VE,BX,L,LA&shading=hill&og=66&n=z
-			var z = 17 - zoom;
-			var s = this.getMsveString(coord.x,coord.y,z);
-			var v = this.getMsveServer(coord.x,coord.y,z);
-			return 'http://r'+v+'.ortho.tiles.virtualearth.net/tiles/r'+s+'.png?g=1'; 
-			},
-			getMsveDirection: function(x, y) {
-				if (x == 1){
-				if (y == 1){
-				return '3';
-				} else if (y == 0){
-				return '1';
-				}
-				} else if (x == 0) {
-				if (y == 1){
-				return '2';
-				} else if (y == 0){
-				return '0';
-				}
-				}
-				return '';
-			},
-			getMsveString: function(x, y, z) {
-				var rx, x, ry, y;
-				var s = '';
-				for(var i = 17; i > z; i--){
-				rx = x % 2;
-				x = Math.floor(x / 2);
-				ry = y % 2;
-				y = Math.floor(y / 2);
-				s = this.getMsveDirection(rx, ry) + s;
-				}
-				return s;
-			},
-			getMsveServer: function(x, y, z) {
-				var rx, x, ry, y;
-				var s = '';
-				for(var i = 17; i > z; i--){
-				rx = x % 2;
-				x = Math.floor(x / 2);
-				ry = y % 2;
-				y = Math.floor(y / 2);
-				s = this.getMsveDirection(rx, ry);
-				}
-				return s;
-			},
-			tileSize: new google.maps.Size(256, 256),
-			name: "Bing",
-			maxZoom: 18
-		}));
-		
-        map.mapTypes.set('Wikimapia', new google.maps.ImageMapType({
-                getTileUrl: function(coord, zoom) {
-                        return 'http://i'+ ((coord.x%4) + (coord.y%4) * 4) +'.wikimapia.org/?x=' + coord.x + '&y='+ coord.y +'&zoom='+ zoom +'&r=0&type=&lng=0';
-                },
-                tileSize: new google.maps.Size(256, 256),
-                isPng: true,
-                alt: "Wikimapia",
-                name: "Wikimapia",
-                maxZoom: 22,
-                minZoom:0
-        }));
-        
-        map.mapTypes.set('2GIS', new google.maps.ImageMapType({
-                getTileUrl: function(coord, zoom) {
-                        return "http://tile"+((coord.x+coord.y)%5)+".maps.2gis.ru/tiles?x=" + coord.x + "&y=" + coord.y + "&z=" + zoom;
-                },
-                tileSize: new google.maps.Size(256, 256),
-                isPng: true,
-                alt: "2ГИС",
-                name: "ДубльГИС",
-                maxZoom: 13,
-                minZoom:0
-                //, opacity:0.5
-        }));
-        
-        map.mapTypes.set('Visicom', new google.maps.ImageMapType({
-                getTileUrl: function(coord, zoom) {
-                        var y = Math.pow(2, zoom) - 1 - coord.y;
-                        return 'http://tms'+ ((coord.x+coord.y)%4) +'.visicom.ua/1.0.3/world_ru/'+ zoom +'/'+ coord.x +'/'+ y +'.png';
-                },
-                tileSize: new google.maps.Size(256, 256),
-                isPng: true,
-                alt: "Visicom",
-                name: "Visicom",
-                maxZoom: 18,
-                minZoom:0
-                //, opacity:0.5
-        }));
-        
-        map.mapTypes.set('Apple', new google.maps.ImageMapType({
-                getTileUrl: function(coord, zoom) {
-                        return "http://gsp2.apple.com/tile?api=1&style=slideshow&layers=default&lang=en_EN&z=" + zoom + "&x=" + coord.x + "&y=" + coord.y + "&v=9";
-                },
-                tileSize: new google.maps.Size(256, 256),
-                name: "Apple",
-                alt: "Эпл",
-                minZoom: 3,
-                maxZoom: 14
-        }));
-		
-		/* Overlays map types - unofficial, but only way how to show them on other map types */
-		this.transitMapType = new google.maps.ImageMapType({
-			getTileUrl: function(coord, zoom) {
-				
-			/* This URL gets just transit lines on the transparent background */			 
-			return "http://mts0.googleapis.com/vt?lyrs=a,transit|seconds_into_week:-1&x=" + coord.x + "&y=" + coord.y + "&z=" + zoom + "&style=1";
-			/* style 15 - normalni styl
-			 * traffic|seconds.... doprava pro cr
-			 * style 2 - velke texty pro vyssi DPI */
-			},
-			tileSize: new google.maps.Size(256, 256),
-			isPng: true
-		});
-		
-		this.trafficMapType = new google.maps.ImageMapType({
-			getTileUrl: function(coord, zoom) {
-				
-			/* This URL gets just transit lines on the transparent background */			 
-			return "http://mts0.googleapis.com/vt?lyrs=h,traffic|seconds_into_week:-1&x=" + coord.x + "&y=" + coord.y + "&z=" + zoom + "&style=3";
-			/* style 15 - normalni styl
-			 * traffic|seconds.... doprava pro cr
-			 * style 2 - velke texty pro vyssi DPI */
-			},
-			tileSize: new google.maps.Size(256, 256),
-			isPng: true
-		});
-        
-},
-
 markerPopupTap: function(inSender, inEvent) {
+		this.$.markerSave.setContent(SavedPlaces.contains(this.lastClickedMarker.place) ? $L('Remove from saved') : $L('Save place'));
 		this.isStreet(this.lastClickedMarker.place.geometry.location);
 		this.$.markerPopupMenu.setStyle(this.$.markerPopup.getStyle());
 		this.$.markerPopupMenu.show();
@@ -1398,14 +1098,14 @@ removeMarker: function(inSender, inEvent) {
 	
 		
 	//remove from markers array
-	for (e=0; e<markers.length; e++){
+	for (var e=0; e<markers.length; e++){
 		if (this.lastClickedMarker.place.id == markers[e].place.id) {
 					enyo.log("Removing marker from array: ", e);
-					markers[e].setMap(null);
+					markers[e].remove();
 					markers.remove(e);
 					this.$.pullout.setSearchData(markers);
-					this.markerCluster.clearMarkers()
-					this.markerCluster.addMarkers(markers);	
+					mapEngine.updateMarkers(markers);
+					break;
 				};
 	};
 	
@@ -1416,9 +1116,8 @@ removeMarker: function(inSender, inEvent) {
 isStreet: function (location) {
 	
 	// Check for a street view at the position
-	this.streetViewCheck = new google.maps.StreetViewService();  
-	this.streetViewCheck.getPanoramaByLocation(location, 50, function(result, status) {
-		if (status == "OK") {
+	mapEngine.hasStreetView(location, function(inAvailable) {
+		if (inAvailable) {
 			
 			this.$.markerStreet.ontap = "onMarkerStreet";
 			this.$.markerStreet.setStyle("color: white;");
@@ -1551,6 +1250,147 @@ cacheOSM: function(inSender, inEvent) {
 	
 },
 
+getLaunchParams: function() {
+	var params = {};
+	if (enyo.platform.webos) {
+		try {
+			params = webos.launchParams();
+		} catch (e) {
+			enyo.log("No launch params: ", e);
+		}
+	} else {
+		/* in a browser: index.html?target=maploc:... */
+		var match = /[?&]target=([^&]*)/.exec(window.location.search);
+		if (match) params.target = decodeURIComponent(match[1].replace(/\+/g, " "));
+	}
+	return params || {};
+},
+
+handleRelaunch: function(inSender, inEvent) {
+	this.handleLaunchParams(inEvent);
+	return true;
+},
+
+/*
+ * LuneOS hands maploc: and mapto: URIs to the app (command-resource-handlers.json):
+ *   {"target": "maploc:<address or lat,lng>"}  show the place
+ *   {"target": "mapto:<address or lat,lng>"}   route from the current position
+ * geo: URIs (RFC 5870, geo:lat,lng or geo:0,0?q=address) are understood as well.
+ */
+handleLaunchParams: function(inParams) {
+	if (!inParams || !inParams.target || !API) return;
+	var target = String(inParams.target);
+	var route = /^mapto:/i.test(target);
+	var query = target.replace(/^(maploc|mapto):(\/\/)?/i, "");
+	var geo = /^geo:([-+]?[\d.]+),([-+]?[\d.]+)[^?]*(\?q=(.*))?$/i.exec(target);
+	if (geo) {
+		query = geo[4] ? geo[4] : geo[1] + "," + geo[2];
+	}
+	try {
+		query = decodeURIComponent(query.replace(/\+/g, " "));
+	} catch (e) {}
+	query = query.replace(/^\s+|\s+$/g, "");
+	if (!query) return;
+
+	enyo.log("Launch target: ", target);
+	this.$.searchLocation.setValue(query);
+
+	var coordinates = /^([-+]?\d{1,2}(\.\d+)?)\s*,\s*([-+]?\d{1,3}(\.\d+)?)$/.exec(query);
+	if (coordinates && !(geo && geo[4])) {
+		var place = {
+			id: Date.now(),
+			name: query,
+			formatted_address: query,
+			icon: "assets/lune-marker-red-64-64.png",
+			geometry: {location: mapEngine.latLng(coordinates[1], coordinates[3])}
+		};
+		this.launchPlace(place, route);
+		return;
+	}
+
+	this.statusPanel($L("Searching") + " " + query + " ...", 5);
+	mapEngine.geocode(query, function(inError, inPlaces) {
+		if (inError || !inPlaces || !inPlaces.length) {
+			this.statusPanel($L("Not found: ") + query, 5);
+			return;
+		}
+		this.launchPlace(inPlaces[0], route);
+	}.bind(this));
+},
+
+launchPlace: function(inPlace, inRoute) {
+	this.$.searchLocation.place = inPlace;
+	this.PlaceMarker([inPlace]);
+	if (inRoute) this.routeToPlace(inPlace);
+},
+
+/* directions from the current position, waits for the first fix if needed */
+routeToPlace: function(inPlace) {
+	if (!this.myLocationMarker) {
+		this.pendingRouteTo = inPlace;
+		this.statusPanel($L("Waiting for your position to plan the route ..."), 10);
+		return;
+	}
+	this.$.markerPopup.hide();
+	this.directRequest.origin = currentPos;
+	this.$.directionStart.setValue($L("My Location"));
+	this.directRequest.destination = inPlace.geometry.location;
+	this.$.directionEnd.setValue(inPlace.name);
+	this.$.directionEnd.place = inPlace;
+	this.$.getDirectButton.setDisabled(false);
+	this.calcRoute();
+},
+
+swapDirections: function(inSender, inEvent) {
+	var request = this.directRequest;
+	var origin = request.origin;
+	request.origin = request.destination;
+	request.destination = origin;
+
+	var startValue = this.$.directionStart.getValue();
+	var startPlace = this.$.directionStart.place;
+	this.$.directionStart.setValue(this.$.directionEnd.getValue());
+	this.$.directionStart.place = this.$.directionEnd.place;
+	this.$.directionEnd.setValue(startValue);
+	this.$.directionEnd.place = startPlace;
+
+	this.$.getDirectButton.setDisabled(false);
+	return true;
+},
+
+toggleSavePlace: function(inSender, inEvent) {
+	var place = this.lastClickedMarker.place;
+	if (SavedPlaces.contains(place)) {
+		SavedPlaces.remove(place);
+		this.statusPanel($L("Removed from saved places"), 2);
+	} else {
+		SavedPlaces.add(place);
+		this.statusPanel($L("Saved") + ": " + place.name, 2);
+	}
+	this.$.markerPopup.hide();
+	this.$.markerPopupMenu.hide();
+},
+
+showSavedPlace: function(inSender, inEvent) {
+	/* reuse the marker when the place is already on the map */
+	for (var i = 0; i < markers.length; i++) {
+		if (markers[i].place.id == inEvent.place.id) {
+			mapEngine.panTo(inEvent.place.geometry.location);
+			this.MarkerClick(markers[i]);
+			return;
+		}
+	}
+	this.PlaceMarker([inEvent.place]);
+	mapEngine.panTo(inEvent.place.geometry.location);
+	mapEngine.setZoom(16);
+},
+
+unitsChange: function(inSender, inEvent) {
+	Prefs.lengthUnits = inEvent.value;
+	this.savePrefs();
+	mapEngine.updateScale();
+},
+
 handleBackGesture: function(inSender, inEvent) {
 	enyo.log("**** BACK ****");
 },
@@ -1560,15 +1400,14 @@ blurSearch: function(inSender, inEvent) {
 
 bindAutocompleter: function(inSender, inEvent) {
 
-	// setup google SearchBox for directions	
-	this.DirectAutocomplete = new google.maps.places.SearchBox(inSender.node);
-	this.DirectAutocomplete.bindTo('bounds', map);
-	new google.maps.event.addListener(this.DirectAutocomplete, 'places_changed', this.SelectedDirectAutocomplete.bind(this, inSender));
+	// setup the engine's place search for a directions field, once per field
+	if (inSender.searchAttached) return;
+	inSender.searchAttached = true;
+	mapEngine.attachSearch(inSender.hasNode(), this.SelectedDirectAutocomplete.bind(this, inSender), this.searchFailed.bind(this));
 },
 
-SelectedDirectAutocomplete: function(inSender, inEvent) {
+SelectedDirectAutocomplete: function(inSender, places) {
 
-		var places = this.DirectAutocomplete.getPlaces();
 		inSender.place = places[0];
 		inSender.setValue(places[0].name);
 		
@@ -1602,34 +1441,12 @@ closeInfoDialog: function() {
 
 setupDirectionService: function () {
 	
-	//setup direction service
-	var rendererOptions = {
-		map: map,
-		suppressMarkers: true,
-		polylineOptions: {
-			//geodesic: true,
-			clickable: false,
-			//editable: true,
-			strokeColor: '#4941e3',
-			strokeOpacity: 0.7,
-			strokeWeight: 8
-			},
-		markerOptions: {
-			optimized: true
-			},
-		suppressInfoWindows: true,
-		draggable: false,
-		};
-		
+	//setup direction request, the engine keeps its own direction service
 	this.directRequest = {
           origin: null,
           destination: null,
-          //unitSystem: this.getGoogleUnitSystem(this.Preferences.LengthUnits),
-          travelMode: google.maps.DirectionsTravelMode.DRIVING,
+          travelMode: "DRIVING"
         };
-        
-    this.directionsService = new google.maps.DirectionsService();
-	this.directionsDisplay = new google.maps.DirectionsRenderer(rendererOptions);
 	
 },
 
@@ -1642,16 +1459,11 @@ calcRoute: function() {
 
 		/** Set the transit options **/
 
-		var request = this.directRequest;
-		request.travelMode = google.maps.TravelMode[this.directRequest.travelMode];
+		mapEngine.route(this.directRequest, function(status, response) {
 
-		this.directionsService.route(request, function(response, status) {
-
-			if (status == google.maps.DirectionsStatus.OK) {
-				this.directionsDisplay.setDirections(response);
-				this.directionsDisplay.setMap(map);
-				//this.routeIndex = this.directionsDisplay.getRouteIndex();
-				if (window.innerWidth > 480) { this.$.pullout.openPullout("directpanel"); this.$.directRadio.setActive(true); map.panBy(-320,0);};
+			if (!status) {
+				mapEngine.showRoute(response);
+				if (window.innerWidth > 480) { this.$.pullout.openPullout("directpanel"); this.$.directRadio.setActive(true); mapEngine.panBy(-320,0);};
 				this.lastPanel = "directpanel";
 				this.$.getDirectButton.setDisabled(true);
 				this.$.pullout.setDirectData(response);
@@ -1659,7 +1471,8 @@ calcRoute: function() {
 				var description = response.routes[this.routeIndex].legs[0].distance.text + "; " + response.routes[this.routeIndex].legs[0].duration.text;
 				this.toggleTopBar("directBoxResult", "<span style='color: gray'>From: </span>" + this.$.directionStart.getValue() + "<br><span style='color: gray'>To: </span>" + this.$.directionEnd.getValue() + "<br>" + description);
 			} else { 
-				this.info($L("No route"));
+				enyo.log("Route failed: ", status);
+				this.info($L("No route") + ": " + $L(String(status)));
 				}
 		}.bind(this));
 	} else {
@@ -1712,34 +1525,28 @@ if (!this.directStepMarker) {
 	
 		var size = 28*window.devicePixelRatio;
 
-		var image = {
-			url: "assets/poi_direction_step.png",
-			size: new google.maps.Size(size, size),
-			origin: new google.maps.Point(0, 0),
-			anchor: new google.maps.Point(size/2, size/2),
-			scaledSize: new google.maps.Size(size, size)
-		  };
-		
-		this.directStepMarker = new google.maps.Marker({
+		this.directStepMarker = mapEngine.addMarker({
 			position: item.start_point,
-			map: map,
-			optimized: this.optimizedMarkers,
-			icon: image
+			iconUrl: "assets/poi_direction_step.png",
+			size: size,
+			anchor: "center",
+			optimized: this.optimizedMarkers
 		});
 		
 		this.directStepMarker.step = item.step;
 		
-		google.maps.event.addListener(this.directStepMarker,"click",this.directMarkerClick.bind(this, this.directStepMarker, item));
+		this.directStepMarker.onClick(this.directMarkerClick.bind(this, this.directStepMarker, item));
 
 		
-		map.panTo(item.start_point);
-		map.setZoom(16);
+		mapEngine.panTo(item.start_point);
+		mapEngine.setZoom(16);
 		
 
 	} else {
+		this.directStepMarker.restore();
 		this.directStepMarker.setPosition(item.start_point);
 		this.directStepMarker.step = item.step;
-		google.maps.event.addListener(this.directStepMarker,"click",this.directMarkerClick.bind(this, this.directStepMarker, item));
+		this.directStepMarker.onClick(this.directMarkerClick.bind(this, this.directStepMarker, item));
 
 		};
 },
@@ -1748,7 +1555,7 @@ directStepGo: function (inSender, inEvent) {
 
 	var item = this.$.pullout.goToStep(this.directStepMarker.step + inSender.step);
 	this.setDirectStep(null, item);
-	map.panTo(item.start_location);
+	mapEngine.panTo(item.start_location);
 	this.directMarkerClick(this.directStepMarker, item);
 },
 
@@ -1780,8 +1587,10 @@ mapTapHold: function (inSender, inEvent) {
 	
 	this.statusPanel("Dropping a pin ...", 10);
 
-	var point = new google.maps.Point(inEvent.srcEvent.offsetX, inEvent.srcEvent.offsetY);
-	this.GeocodeFromLatLng(this.fromPixelToLatLng(point));
+	/* position of the hold relative to the map container */
+	var rect = this.$.mapdiv.hasNode().getBoundingClientRect();
+	var point = {x: inEvent.clientX - rect.left, y: inEvent.clientY - rect.top};
+	this.GeocodeFromLatLng(mapEngine.containerPointToLatLng(point));
 
 },
 
@@ -1847,7 +1656,7 @@ compassHandler: function (inSender, inEvent) {
 	if (!document.getElementById("compass")) {		
 		this.haveCompass = true;		
 			try {
-			map.getDiv().firstChild.firstChild.appendChild(this.compassContainer);
+			mapEngine.getOverlayContainer().appendChild(this.compassContainer);
 			document.getElementById("compass").appendChild(this.needleContainer);
 		} catch (e) {
 			enyo.log("Map not loaded yet...");
@@ -1862,7 +1671,7 @@ updateCompassPosition: function (latlng) {
 	
 	if (!this.haveCompass) return;
 	
-	var coord = this.fromLatLngToPixel(latlng);
+	var coord = mapEngine.latLngToContainerPoint(latlng);
 	
 		coord.x = Math.round(coord.x-this.compassContainer.offsetWidth/2);
 		coord.y = Math.round(coord.y-this.compassContainer.offsetHeight);

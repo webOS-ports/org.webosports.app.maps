@@ -614,6 +614,11 @@ only screen and (min-device-width : 480px) and (max-device-width : 800px){
 	background:url(../../assets/compass-south.png) center center no-repeat;
 }
 
+/* Leaflet panes start at z-index 200, keep the compass above the markers */
+.leaflet-container #compass {
+	z-index: 650;
+}
+
 #compass {
 	height: 30px;
 	width: 30px;
@@ -697,3 +702,21 @@ background-size: 100% 3600%;
 .roundabout-left{ background: url(../../assets/maneuvers.png) 0px -784px ; }
 .roundabout-right{ background: url(../../assets/maneuvers.png) 0px -924px ; }
 
+
+/* zoom buttons for engines without on-map controls, right side, clear of the grabber */
+.map-zoom-buttons {
+	position: absolute;
+	right: 8px;
+	top: 50%;
+	margin-top: -48px;
+	width: 34px;
+	padding: 4px 2px;
+	z-index: 20;
+	border-radius: 20px;
+	opacity: 0.9;
+}
+
+.map-zoom-buttons .onyx-icon-button {
+	display: block;
+	margin: 4px auto;
+}

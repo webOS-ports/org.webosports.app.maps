@@ -1,12 +1,9 @@
-var gAPI = "?key=AIzaSyBSTvlMEfLkRzgdZbqhv7PsA2MulWjgYNs&v=3"; //default Google API
-var map;
-var geocoder;
-var elevator;
 var markers = [];
 var selectMode = false; 
 var appInfo;
 var API = false;
 var Prefs = {
+			engine: "osm",
 			lastPosLat: 37.39281,
 			lastPosLng: -122.04046199999999,
 			lastZoom: 8,
@@ -43,36 +40,60 @@ try {
 	appInfo = FallbackAppInfo;
 };
 		
-var cookie = enyo.getCookie("mapsAppPrefs");
-if (cookie) {
+/*
+ * Preferences live in localStorage: WebAppManager keeps no cookies for file://
+ * apps, so the cookie only persisted in browsers. It is still read once so
+ * existing browser users keep their settings.
+ */
+var PrefsStore = {
+	key: "mapsAppPrefs",
+	load: function () {
+		var stored = null;
+		try {
+			stored = window.localStorage.getItem(this.key);
+		} catch (e) {}
+		if (!stored) stored = enyo.getCookie(this.key);
+		return stored;
+	},
+	save: function (inPrefs) {
+		var json = enyo.json.stringify(inPrefs);
+		try {
+			window.localStorage.setItem(this.key, json);
+		} catch (e) {
+			enyo.setCookie(this.key, json);
+		}
+	},
+	clear: function () {
+		try {
+			window.localStorage.removeItem(this.key);
+		} catch (e) {}
+		enyo.setCookie(this.key, null, { "Max-Age": 0 });
+	}
+};
+
+var storedPrefs = PrefsStore.load();
+if (storedPrefs) {
 	// if it exists and correct, else reset and use the default
 	try {
-		Prefs = enyo.mixin(Prefs, enyo.json.parse(cookie));
+		Prefs = enyo.mixin(Prefs, enyo.json.parse(storedPrefs));
 	} catch (e) {
-		enyo.log("Cannot parse cookie, resetting: ", e);
-		enyo.setCookie("mapsAppPrefs", null, { "Max-Age": 0 }); 
+		enyo.log("Cannot parse stored preferences, resetting: ", e);
+		PrefsStore.clear();
 	};	
 };
 
+var currentPos;
+
 function loadScript() {
-  var script = document.createElement('script');
-  script.type = 'text/javascript';
-  //script.src = "http://maps.google.com/maps/api/js" + gAPI + "&libraries=places,geometry&language=" + Prefs.lang + '&callback=initialize';
-   script.src = "https://maps.googleapis.com/maps/api/js" + gAPI + "&libraries=places,geometry&language=" + Prefs.lang + '&callback=initialize';
-  document.body.appendChild(script);
+	/* mapEngine is created from Prefs.engine in source/engines/setup.js */
+	mapEngine.loadApi(initialize);
 }
 
 function initialize() {
 
-			directionsDisplay = new google.maps.DirectionsRenderer();
-			directionsService = new google.maps.DirectionsService();
-			trafficLayer = new google.maps.TrafficLayer();
-			transitLayer = new google.maps.TransitLayer();
-			bikeLayer = new google.maps.BicyclingLayer();
-			geocoder = new google.maps.Geocoder();
-			currentPos = new google.maps.LatLng(37.39281, -122.04046199999999);
+			currentPos = mapEngine.latLng(37.39281, -122.04046199999999);
 
-			console.log("*** API INITIALIZED ***");
+			console.log("*** API INITIALIZED *** ", mapEngine.id);
 			API = true;
 
 }

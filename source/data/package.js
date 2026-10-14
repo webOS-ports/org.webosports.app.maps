@@ -9,5 +9,6 @@ enyo.depends(
 	"W3CGeolocation.js",
 	"webOSGeolocation.js",
 	"Helper.js",
+	"SavedPlaces.js",
 	"Pullout.js"
 );

@@ -15,7 +15,10 @@ enyo.kind({
 		onDirectOptions: "",
 		onFillDirectField: "",
 		onSetDirectStep: "",
-		onSavePrefs: ""
+		onSavePrefs: "",
+		onEngineChange: "",
+		onSavedSelect: "",
+		onUnitsChange: ""
 	},
 	components: [
 		{name: "shadow", classes: "pullout-shadow"},
@@ -26,23 +29,7 @@ enyo.kind({
 				{name: "maptypepanel", kind: "Scroller", touch: true, fixedTime: false, showing: true, classes: "enyo-fit", components: [
 					
 					{name: "mapType", kind: "Group", classes: "onyx-groupbox settings", highlander: true, onchange: "mapTypeChange", components: [
-						{kind: "onyx.GroupboxHeader", content: $L("Map Type (Google)")},
-						{kind: "LabeledItem", name: "Road", label: $L("Roadmap"), mapType: "ROADMAP", isRetina: true, icon: "assets/map-type-road.png"},
-						{kind: "LabeledItem", name: "Satellite", label: $L("Satellite"), mapType: "SATELLITE", isRetina: false, icon: "assets/map-type-satellite.png"},
-						{kind: "LabeledItem", name: "Hybrid", label: $L("Hybrid"), mapType: "HYBRID", isRetina: true, icon: "assets/map-type-hybrid.png"},
-						{kind: "LabeledItem", name: "Terrain", label: $L("Terrain"), mapType: "TERRAIN", isRetina: true, icon: "assets/map-type-terrain.png"},
-						{kind: "onyx.GroupboxHeader", content: $L("Map Type (Others)")},
-						{kind: "LabeledItem", name: "OSM", label: $L("OpenStreetMap"), mapType: "OSM", isRetina: false, icon: "assets/map-type-osm.png"},
-						{kind: "LabeledItem", name: "OCM", label: $L("OpenCycleMap"), mapType: "OCM", isRetina: false, icon: "assets/map-type-ocm.png"},
-						{kind: "LabeledItem", name: "NokiaHere", label: $L("Nokia Maps"), mapType: "NOKIA", isRetina: false, icon: "assets/map-type-nokia.jpg"},
-						{kind: "LabeledItem", name: "Yandex", label: $L("Yandex Maps"), mapType: "Yandex", isRetina: false, icon: "assets/map-type-yandex.png"}
-						/* NOT LEGAL MAP TYPES
-						{kind: "LabeledItem", name: "Bing", label: $L("Bing Maps"), mapType: "Bing", isRetina: false, icon: "assets/map-type-bing-road.png"},
-						{kind: "LabeledItem", name: "Wikimapia", label: $L("Wikimapia"), mapType: "Wikimapia", isRetina: false, icon: "assets/map-type-bing-road.png"},
-						{kind: "LabeledItem", name: "2GIS", label: $L("2GIS"), mapType: "2GIS", isRetina: false, icon: "assets/map-type-bing-road.png"},
-						{kind: "LabeledItem", name: "Visicom", label: $L("Visicom"), mapType: "Visicom", isRetina: false, icon: "assets/map-type-bing-road.png"},
-						{kind: "LabeledItem", name: "Apple", label: $L("Apple"), mapType: "Apple", isRetina: false, icon: "assets/map-type-bing-road.png"}
-						*/
+						/* filled from mapEngine.mapTypes() in create */
 					]}
 					
 				]},
@@ -66,7 +53,7 @@ enyo.kind({
 					{kind: "onyx.RadioGroup", classes: "bookmark-header", components: [
 						{content: $L("Current"), name: "current", panel: "currentlist", active: true, ontap: "togglePlaces" },
 						//{content: $L("Recent"), name: "recents", disabled: true, panel: "recentslist", ontap: "togglePlaces"},
-						{content: $L("Saved"), name: "saved", disabled: true, panel: "savedlist", ontap: "togglePlaces"}
+						{content: $L("Saved"), name: "saved", panel: "savedlist", ontap: "showSaved"}
 						//{content: $L("Details"), name: "details", panel: "detailspanel", ontap: "togglePlaces"},
 					]},
 					
@@ -77,9 +64,10 @@ enyo.kind({
 							{kind: "List", name: "recentslist", onSetupItem: "", showing: false, components: [
 								//{kind: "SearchListItem", name:"listItem", content: ""}
 							]},
-							{kind: "List", name: "savedlist", onSetupItem: "", showing: false, components: [
-								//{kind: "SearchListItem", name:"listItem", content: ""}
-							]}
+							{kind: "List", name: "savedlist", onSetupItem: "setupSavedData", showing: false, reorderable: false, enableSwipe: false, components: [
+								{kind: "SearchListItem", name: "savedItem", ontap: "", content: ""}
+							]},
+							{name: "savedEmpty", showing: false, classes: "item-address", style: "padding: 10px;", content: $L("No saved places yet. Tap a marker, then its popup, and choose Save place.")}
 							/*
 							{name: "detailspanel", classes: "item", onSetupItem: "", showing: false, components: [
 								{components: [
@@ -117,16 +105,16 @@ enyo.kind({
 					]},
 					{kind: "onyx.RadioGroup", style: "text-align: center", classes: "travel-radio", components: [
 							
-							{param: "travelMode", value: "DRIVING", active: true, ontap: "setDirectOptions", components: [
+							{param: "travelMode", name: "travelDRIVING", value: "DRIVING", active: true, ontap: "setDirectOptions", components: [
 								{kind: "onyx.Icon", src: "assets/travel-mode-sprite.png", style: "background-position-y: -40px", active: true}
 								]},
-							{param: "travelMode", value: "WALKING", ontap: "setDirectOptions", components: [
+							{param: "travelMode", name: "travelWALKING", value: "WALKING", ontap: "setDirectOptions", components: [
 								{kind: "onyx.Icon", src: "assets/travel-mode-sprite.png", style: "background-position-y: -120px"}
 								]},
-							{param: "travelMode", value: "TRANSIT", ontap: "setDirectOptions", components: [
+							{param: "travelMode", name: "travelTRANSIT", value: "TRANSIT", ontap: "setDirectOptions", components: [
 								{kind: "onyx.Icon", src: "assets/travel-mode-sprite.png", style: "background-position-y: -80px"}
 								]},
-							{param: "travelMode", value: "BICYCLING", ontap: "setDirectOptions", components: [
+							{param: "travelMode", name: "travelBICYCLING", value: "BICYCLING", ontap: "setDirectOptions", components: [
 								{kind: "onyx.Icon", src: "assets/travel-mode-sprite.png", style: "background-position-y: -160px"}
 								]}
 							/** I hope that one day google introduce the FLY mode in API also **/
@@ -155,11 +143,21 @@ enyo.kind({
 					
 					{kind: "onyx.Groupbox", classes: "settings", components: [
 						{kind: "onyx.GroupboxHeader", content: $L("General settings")},
+						{ components: [
+							{name: "Engine", classes: "onyx-toolbar-inline", components: [
+								{kind: "Image", src: "assets/help.png", classes: "labeled-item-icon", ontap: "settingsHelp", help: $L("Selects the map provider used for maps, search, directions and elevation. The app reloads to apply the change.")},
+								{name: "labelEngine", kind: "Control", content: $L("Map engine")},
+								{kind: "onyx.PickerDecorator", classes: "lang-picker", components: [
+									{name: "enginePickerButton", classes: "lang-picker"},
+									{kind: "onyx.Picker", name: "enginePicker", classes: "zoom-pre3 lang-picker", onSelect: "EngineChange"}
+								]}
+							]}
+						]},
 						{kind: "SettingsItem", label: $L("Fullscreen"), showing: false, icon: "assets/help.png", help: $L("Switch between fullscreen and normal mode"), name: "FullscreenToggle", defaultKind: "onyx.ToggleButton", onChange: "Fullscreen", onIconTap: "settingsHelp"},
 						//{kind: "LabeledItem", label: "Language", icon: "assets/icon-traffic.png", defaultKind: "onyx.ToggleButton", onChange: "LanguageChange"},
 						{ components: [
 							{name: "Lang", classes: "onyx-toolbar-inline", components: [
-								{kind: "Image", src: "assets/help.png", classes: "labeled-item-icon", ontap: "settingsHelp", help: $L("Overrides Google API and app language, needs application restart")},
+								{kind: "Image", src: "assets/help.png", classes: "labeled-item-icon", ontap: "settingsHelp", help: $L("Overrides map API and app language, needs application restart")},
 								{name: "labelLang", kind: "Control", content: $L("Language")},
 								{kind: "onyx.PickerDecorator", classes: "lang-picker", components: [
 									{name:"langPickerButton", classes: "lang-picker"},
@@ -188,7 +186,20 @@ enyo.kind({
 							]}
 						]},
 						{kind: "onyx.GroupboxHeader", content: $L("Map settings")},
-						{kind: "SettingsItem", label: $L("High DPI tiles"), showing: true, icon: "assets/help.png", help: $L("It uses the tiles for high-dpi devices (e.g. HP Pre3). Only for Google map types."), name: "retina", defaultKind: "onyx.ToggleButton", onChange: "retinaTiles", onIconTap: "settingsHelp"},
+						{ components: [
+							{name: "Units", classes: "onyx-toolbar-inline", components: [
+								{kind: "Image", src: "assets/help.png", classes: "labeled-item-icon", ontap: "settingsHelp", help: $L("Units for distances, directions and the scale bar")},
+								{name: "labelUnits", kind: "Control", content: $L("Units")},
+								{kind: "onyx.PickerDecorator", classes: "lang-picker", components: [
+									{name: "unitsPickerButton", classes: "lang-picker"},
+									{kind: "onyx.Picker", name: "unitsPicker", classes: "zoom-pre3 lang-picker", onSelect: "UnitsChange", components: [
+										{content: $L("Metric (km)"), name: "unitsmetric", value: "metric"},
+										{content: $L("Imperial (mi)"), name: "unitsimperial", value: "imperial"}
+									]}
+								]}
+							]}
+						]},
+						{kind: "SettingsItem", label: $L("High DPI tiles"), showing: true, icon: "assets/help.png", help: $L("It uses the tiles for high-dpi devices (e.g. HP Pre3). Only for Google map types."), name: "retina", showing: false, defaultKind: "onyx.ToggleButton", onChange: "retinaTiles", onIconTap: "settingsHelp"},
 						{kind: "SettingsItem", label: $L("Smart caching"), showing: false, icon: "assets/help.png", help: $L("Enables smart caching, tiles are loaded from local storage and every new tile is saved to local storage for future use. Needs restart."), name: "OSMMapCache", defaultKind: "onyx.ToggleButton", onChange: "cacheOSM", onIconTap: "settingsHelp"},
 						{kind: "SettingsItem", label: $L("Use MapTool cache"), showing: false, icon: "assets/help.png", help: $L("If enabled, the map use the MappingTool cache in /media/internal/.MapTool directory"), name: "MapCacheExternal", defaultKind: "onyx.ToggleButton", onChange: "cacheOSM", onIconTap: "settingsHelp"},
 					]}
@@ -308,45 +319,50 @@ enyo.kind({
 			t.show();
 		}
 	},
+	create: function() {
+		this.inherited(arguments);
+
+		/* Map types offered by the engine */
+		var types = mapEngine.mapTypes();
+		for (var i = 0; i < types.length; i++) {
+			if (types[i].header) {
+				this.$.mapType.createComponent({kind: "onyx.GroupboxHeader", content: types[i].header}, {owner: this});
+			} else {
+				this.$.mapType.createComponent({kind: "LabeledItem", name: "mapType" + types[i].id, label: types[i].label, mapType: types[i].id, isRetina: types[i].isRetina, icon: types[i].icon}, {owner: this});
+			}
+		}
+
+		/* Engines to choose from */
+		var engines = MapEngines.list();
+		for (var j = 0; j < engines.length; j++) {
+			this.$.enginePicker.createComponent({content: engines[j].label, engine: engines[j].id, active: engines[j].id == mapEngine.id}, {owner: this});
+		}
+		this.$.enginePickerButton.setContent(mapEngine.label);
+	},
 	pulloutInit: function() {
 		
 	/* declare variables */	
 	this.route = [];
 
 	/* Set inital checkboxes */
-	switch (Prefs.mapType) {
-	  case "ROADMAP":
-      case "ROADMAP_HDPI":
-		this.$.Road.checked = true;
-		this.$.Road.inputChanged();
-        break;
-      case "OSM":
-        this.$.OSM.checked = true;
-		this.$.OSM.inputChanged();
-        break;
-      case "OCM":
-        this.$.OCM.checked = true;
-		this.$.OCM.inputChanged();
-        break;
-      case "NOKIA":
-        this.$.NokiaHere.checked = true;
-		this.$.NokiaHere.inputChanged();
-        break;
-      case "SATELLITE":
-        this.$.Satellite.checked = true;
-		this.$.Satellite.inputChanged();
-        break;
-      case "HYBRID":
-      case "HYBRID_HDPI":
-		this.$.Hybrid.checked = true;
-		this.$.Hybrid.inputChanged();
-        break;
-      case "TERRAIN":
-      case "TERRAIN_HDPI":
-        this.$.Terrain.checked = true;
-		this.$.Terrain.inputChanged();
-        break;
-    };
+	var current = this.$["mapType" + String(Prefs.mapType).replace(/_HDPI$/, "")];
+	if (current) {
+		current.checked = true;
+		current.inputChanged();
+	};
+
+	/* Show only what the engine supports */
+	this.$.trafficToggle.setShowing(!!mapEngine.layers.traffic);
+	this.$.transitToggle.setShowing(!!mapEngine.layers.transit);
+	this.$.bikeToggle.setShowing(!!mapEngine.layers.bike);
+	var modes = ["DRIVING", "WALKING", "TRANSIT", "BICYCLING"];
+	for (var m = 0; m < modes.length; m++) {
+		this.$["travel" + modes[m]].setShowing(enyo.indexOf(modes[m], mapEngine.travelModes) >= 0);
+	}
+	this.$.routeAlternativesToggle.setShowing(!!mapEngine.routeOptions.provideRouteAlternatives);
+	this.$.avoidTollsToggle.setShowing(!!mapEngine.routeOptions.avoidTolls);
+	this.$.avoidHighwaysToggle.setShowing(!!mapEngine.routeOptions.avoidHighways);
+	this.$.retina.setShowing(mapEngine.id == "google");
     
 		/* Sets the Language picker */
 		try {
@@ -357,7 +373,12 @@ enyo.kind({
 			this.$.langPickerButton.setContent("Default");	
 		};
 		
-		/* Sets the GPS update interval picker */
+		/* Sets the units picker */
+	var units = this.$["units" + Prefs.lengthUnits] || this.$.unitsmetric;
+	units.setActive(true);
+	this.$.unitsPickerButton.setContent(units.content);
+
+	/* Sets the GPS update interval picker */
 		var name = "gpsInterval" + Prefs.GPSinterval;
 		this.$[name].setActive(true);
 		
@@ -394,6 +415,7 @@ enyo.kind({
 			this.$.currentlist.hide();
 			//this.$.recentslist.hide();
 			this.$.savedlist.hide();
+			this.$.savedEmpty.hide();
 			//this.$.detailspanel.hide();		
 			panel.show();
 			if (name) name.setActive(true);
@@ -463,7 +485,7 @@ enyo.kind({
 			this.$.listItem.setItemIcon(item.photos[0].getUrl({'maxWidth': 100, 'maxHeight': 100}));
 		} else if (item.icon.contains("geocode-71")) {
 			/* use marker icon instead of ugly default google pin image */
-			this.$.listItem.setItemIcon(this.results[i].icon.url);
+			this.$.listItem.setItemIcon(this.results[i].iconUrl);
 		} else {
 			/* use place icon */
 			this.$.listItem.setItemIcon(item.icon);
@@ -474,12 +496,8 @@ enyo.kind({
 	    var selected = inSender.isSelected(i);
 	    this.$.listItem.setSelected(selected);
 	    if(selected && !selectMode){
-	      	map.panTo(item.geometry.location);
-        	 try {
-				map.fitBounds(place.geometry.viewport);
-			  } catch (error) {
-				map.setZoom(17);
-			  };
+	      	mapEngine.panTo(item.geometry.location);
+		mapEngine.setZoom(17);
 
         	//this.setPlaceDetails(item);
 	    } else if (selected && selectMode) {
@@ -487,6 +505,41 @@ enyo.kind({
 		};
 	},
 
+	EngineChange: function(inSender, inEvent) {
+		var engine = inEvent.selected.engine;
+		if (engine == mapEngine.id) return;
+		this.$.enginePickerButton.setContent(inEvent.selected.content);
+		this.doEngineChange({value: engine});
+	},
+	showSaved: function(inSender) {
+		this.saved = SavedPlaces.load();
+		this.togglePlaces({panel: "savedlist", name: "saved"});
+		this.$.savedlist.setCount(this.saved.length);
+		this.$.savedlist.reset();
+		this.$.savedEmpty.setShowing(this.saved.length === 0);
+	},
+	setupSavedData: function(inSender, inEvent) {
+		var i = inEvent.index;
+		var place = SavedPlaces.toPlace(this.saved[i]);
+
+		this.$.savedItem.setItemName(place.name);
+		this.$.savedItem.setItemAddress(place.formatted_address);
+		this.$.savedItem.setItemIcon(place.icon);
+		this.$.savedItem.setItemDistance(getDistanceInCorrectUnits(mapEngine.distance(mapEngine.getCenter(), place.geometry.location)));
+		this.$.savedItem.setItemRating("");
+
+		var selected = inSender.isSelected(i);
+		this.$.savedItem.setSelected(selected);
+		if (selected && !selectMode) {
+			this.doSavedSelect({place: place});
+		} else if (selected && selectMode) {
+			this.doFillDirectField(place);
+		};
+	},
+	UnitsChange: function(inSender, inEvent) {
+		this.$.unitsPickerButton.setContent(inEvent.selected.content);
+		this.doUnitsChange({value: inEvent.selected.value});
+	},
 	LanguageChange: function(inSender) {
 		var code = this.languages[this.$.langPicker.getSelected()].code;
 		this.$.langNotice.show();
@@ -589,7 +642,7 @@ enyo.kind({
 	    this.$.listItemStep.setSelected(selected);
 	    if(selected){
 		  this.doSetDirectStep(item);
-	      map.panTo(item.start_location);
+	      mapEngine.panTo(item.start_location);
 	      
 	    };
 	},
