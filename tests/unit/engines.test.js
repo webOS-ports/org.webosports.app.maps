@@ -488,3 +488,28 @@ test('directions and spoken guidance in Dutch and German', () => {
 	const zh = loadEngines({lang: 'zh-TW'});
 	assert.strictEqual(zh.MapEngines.create('osm').directionsFromOsrm(osrmResponse()).routes[0].legs[0].steps[1].instructions, '左轉進入<b>IJ-passage</b>');
 });
+
+/* SAM takes a field from resources/<language>[/<script>][/<region>]/appinfo.json only when appinfo.json has it with the same type */
+test('localized appinfo.json files only override fields of appinfo.json', () => {
+	const base = JSON.parse(fs.readFileSync(path.join(root, 'appinfo.json'), 'utf8'));
+	const files = [];
+	(function walk(dir) {
+		for (const entry of fs.readdirSync(dir, {withFileTypes: true})) {
+			const file = path.join(dir, entry.name);
+			if (entry.isDirectory()) walk(file);
+			else if (entry.name == 'appinfo.json') files.push(file);
+		}
+	})(path.join(root, 'resources'));
+	assert.ok(files.length >= 4, files.join());
+	const titles = {};
+	for (const file of files) {
+		const local = JSON.parse(fs.readFileSync(file, 'utf8'));
+		for (const key of Object.keys(local)) {
+			assert.ok(key in base, path.relative(root, file) + ': ' + key + ' is not in appinfo.json');
+			assert.strictEqual(typeof local[key], typeof base[key], path.relative(root, file) + ': ' + key);
+		}
+		titles[path.relative(path.join(root, 'resources'), path.dirname(file))] = local.title;
+	}
+	assert.strictEqual(titles['zh'], '地图');
+	for (const dir of ['zh/Hant', 'zh/TW', 'zh/HK']) assert.strictEqual(titles[dir], '地圖', dir);
+});
