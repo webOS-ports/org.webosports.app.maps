@@ -388,11 +388,26 @@
 	border-bottom-left-radius: 0px;
 }
 
-/* the selected tab is blue, as in Messaging */
-.pullout-toolbar button.active {
+/* the selected tab is blue, as in Messaging; so are the selected Current/Saved list, travel
+   mode and route, instead of the darker onyx blue */
+.pullout-toolbar button.active,
+.bookmark-header .onyx-radiobutton.active,
+.travel-radio .onyx-radiobutton.active,
+.route-choices .route-choice.onyx-blue {
 	background-color: #4a86b8;
 	background-image: -webkit-linear-gradient(top, #306ba3, #6ca6ce);
 	background-image: linear-gradient(to bottom, #306ba3, #6ca6ce);
+	color: #ffffff;
+}
+
+/* travel mode glyphs: mid-grey like the tab icons, white on the selected mode */
+.travel-radio .onyx-radiobutton > .onyx-icon {
+	opacity: 0.6;
+}
+
+.travel-radio .onyx-radiobutton.active > .onyx-icon {
+	opacity: 1;
+	filter: brightness(0) invert(1);
 }
 
 /* the place details text, kept off the screen edges like the settings groups */
