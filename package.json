@@ -27,7 +27,13 @@
         "grunt": "~0.4.5",
         "grunt-http-server": "~1.1.0",
         "grunt-contrib-clean": "~0.6.0",
-        "grunt-contrib-jshint": "~0.10.0"
+        "grunt-contrib-jshint": "~0.10.0",
+        "puppeteer-core": "^23.11.1"
+    },
+    "scripts": {
+        "test": "npm run test:unit",
+        "test:unit": "node --test tests/unit/engines.test.js",
+        "test:smoke": "tests/smoke/run.sh"
     },
     "dependencies": {}
 }
