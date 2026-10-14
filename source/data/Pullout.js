@@ -153,7 +153,7 @@ enyo.kind({
 						{kind: "onyx.GroupboxHeader", content: $L("General settings")},
 						{ components: [
 							{name: "Engine", classes: "settings-row", components: [
-								{kind: "Image", src: "assets/help-info.png", classes: "labeled-item-icon", ontap: "settingsHelp", help: $L("Selects the map provider used for maps, search, directions and elevation. The app reloads to apply the change.")},
+								{kind: "Image", src: "assets/help.png", classes: "labeled-item-icon", ontap: "settingsHelp", help: $L("Selects the map provider used for maps, search, directions and elevation. The app reloads to apply the change.")},
 								{name: "labelEngine", kind: "Control", content: $L("Map engine")},
 								{kind: "onyx.PickerDecorator", classes: "lang-picker", components: [
 									{name: "enginePickerButton", classes: "lang-picker"},
@@ -161,11 +161,11 @@ enyo.kind({
 								]}
 							]}
 						]},
-						{kind: "SettingsItem", label: $L("Fullscreen"), showing: false, icon: "assets/help-info.png", help: $L("Switch between fullscreen and normal mode"), name: "FullscreenToggle", defaultKind: "onyx.ToggleButton", onChange: "Fullscreen", onIconTap: "settingsHelp"},
+						{kind: "SettingsItem", label: $L("Fullscreen"), showing: false, icon: "assets/help.png", help: $L("Switch between fullscreen and normal mode"), name: "FullscreenToggle", defaultKind: "onyx.ToggleButton", onChange: "Fullscreen", onIconTap: "settingsHelp"},
 						//{kind: "LabeledItem", label: "Language", icon: "assets/icon-traffic.png", defaultKind: "onyx.ToggleButton", onChange: "LanguageChange"},
 						{ components: [
 							{name: "Lang", classes: "settings-row", components: [
-								{kind: "Image", src: "assets/help-info.png", classes: "labeled-item-icon", ontap: "settingsHelp", help: $L("Overrides map API and app language, needs application restart")},
+								{kind: "Image", src: "assets/help.png", classes: "labeled-item-icon", ontap: "settingsHelp", help: $L("Overrides map API and app language, needs application restart")},
 								{name: "labelLang", kind: "Control", content: $L("Language")},
 								{kind: "onyx.PickerDecorator", classes: "lang-picker", components: [
 									{name:"langPickerButton", classes: "lang-picker"},
@@ -178,7 +178,7 @@ enyo.kind({
 						]},
 						{ showing: false, components: [				
 							{name: "GPSupdate", classes: "settings-row", components: [
-								{kind: "Image", src: "assets/help-info.png", classes: "labeled-item-icon", ontap: "settingsHelp", help: $L("Sets how often will be updated the position")},
+								{kind: "Image", src: "assets/help.png", classes: "labeled-item-icon", ontap: "settingsHelp", help: $L("Sets how often will be updated the position")},
 								{name: "labelGPS", kind: "Control", content: $L("GPS update interval")},
 								{kind: 'onyx.PickerDecorator', classes: "lang-picker", components: [
 									{name: "GPSupdatePickerButton", classes: "lang-picker", content: ""},
@@ -196,7 +196,7 @@ enyo.kind({
 						{kind: "onyx.GroupboxHeader", content: $L("Map settings")},
 						{ components: [
 							{name: "Units", classes: "settings-row", components: [
-								{kind: "Image", src: "assets/help-info.png", classes: "labeled-item-icon", ontap: "settingsHelp", help: $L("Units for distances, directions and the scale bar")},
+								{kind: "Image", src: "assets/help.png", classes: "labeled-item-icon", ontap: "settingsHelp", help: $L("Units for distances, directions and the scale bar")},
 								{name: "labelUnits", kind: "Control", content: $L("Units")},
 								{kind: "onyx.PickerDecorator", classes: "lang-picker", components: [
 									{name: "unitsPickerButton", classes: "lang-picker"},
@@ -207,10 +207,10 @@ enyo.kind({
 								]}
 							]}
 						]},
-						{kind: "SettingsItem", label: $L("High DPI tiles"), showing: true, icon: "assets/help-info.png", help: $L("It uses the tiles for high-dpi devices (e.g. HP Pre3). Only for Google map types."), name: "retina", showing: false, defaultKind: "onyx.ToggleButton", onChange: "retinaTiles", onIconTap: "settingsHelp"},
-						{kind: "SettingsItem", label: $L("Offline map tiles"), showing: false, icon: "assets/help-info.png", help: $L("Keeps the map tiles you have looked at, up to about 50 MB, so those areas still show without a network connection. Nothing is downloaded in advance."), name: "offlineTiles", defaultKind: "onyx.ToggleButton", onChange: "offlineTilesChange", onIconTap: "settingsHelp"},
-						{kind: "SettingsItem", label: $L("Smart caching"), showing: false, icon: "assets/help-info.png", help: $L("Enables smart caching, tiles are loaded from local storage and every new tile is saved to local storage for future use. Needs restart."), name: "OSMMapCache", defaultKind: "onyx.ToggleButton", onChange: "cacheOSM", onIconTap: "settingsHelp"},
-						{kind: "SettingsItem", label: $L("Use MapTool cache"), showing: false, icon: "assets/help-info.png", help: $L("If enabled, the map use the MappingTool cache in /media/internal/.MapTool directory"), name: "MapCacheExternal", defaultKind: "onyx.ToggleButton", onChange: "cacheOSM", onIconTap: "settingsHelp"},
+						{kind: "SettingsItem", label: $L("High DPI tiles"), showing: true, icon: "assets/help.png", help: $L("It uses the tiles for high-dpi devices (e.g. HP Pre3). Only for Google map types."), name: "retina", showing: false, defaultKind: "onyx.ToggleButton", onChange: "retinaTiles", onIconTap: "settingsHelp"},
+						{kind: "SettingsItem", label: $L("Offline map tiles"), showing: false, icon: "assets/help.png", help: $L("Keeps the map tiles you have looked at, up to about 50 MB, so those areas still show without a network connection. Nothing is downloaded in advance."), name: "offlineTiles", defaultKind: "onyx.ToggleButton", onChange: "offlineTilesChange", onIconTap: "settingsHelp"},
+						{kind: "SettingsItem", label: $L("Smart caching"), showing: false, icon: "assets/help.png", help: $L("Enables smart caching, tiles are loaded from local storage and every new tile is saved to local storage for future use. Needs restart."), name: "OSMMapCache", defaultKind: "onyx.ToggleButton", onChange: "cacheOSM", onIconTap: "settingsHelp"},
+						{kind: "SettingsItem", label: $L("Use MapTool cache"), showing: false, icon: "assets/help.png", help: $L("If enabled, the map use the MappingTool cache in /media/internal/.MapTool directory"), name: "MapCacheExternal", defaultKind: "onyx.ToggleButton", onChange: "cacheOSM", onIconTap: "settingsHelp"},
 					]}
 				]},
 				{name: "aboutpanel", kind: "Scroller", touch: true, fixedTime: false, showing: false, classes: "enyo-fit", components: [
