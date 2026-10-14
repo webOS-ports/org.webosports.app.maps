@@ -158,15 +158,26 @@ async function waitFor(page, fn, timeout = 20000, arg) {
 	const before = await page.evaluate('markers.length');
 	await page.evaluate(`${mainView}.$.markerPopup.hide(); ${mainView}.$.markerPopupMenu.hide();`);
 	await page.evaluate(`(function(v){ window.__trace=[]; var oh=v.mapTapHold; v.mapTapHold=function(s,e){ window.__trace.push('hold '+e.clientX+','+e.clientY); return oh.apply(this, arguments); }; var og=v.GeocodeFromLatLng; v.GeocodeFromLatLng=function(ll){ window.__trace.push('geocode '+ll.toUrlValue(5)); return og.apply(this, arguments); }; })(${mainView})`);
-	await page.mouse.move(400, 400);
-	await page.mouse.down();
-	await sleep(1000);
-	await page.mouse.up();
+	// on a touch device Enyo listens to touch events only, so press with those there, in the middle of the (smaller) map
+	const touch = await page.evaluate('!!enyo.platform.touch');
+	const at = touch ? await page.evaluate('(function(){var r=document.getElementById("map_canvas").getBoundingClientRect(); return {x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2)};})()') : {x: 400, y: 400};
+	if (touch) {
+		const cdp = await page.target().createCDPSession();
+		await cdp.send('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [at]});
+		await sleep(1000);
+		await cdp.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
+		await cdp.detach();
+	} else {
+		await page.mouse.move(at.x, at.y);
+		await page.mouse.down();
+		await sleep(1000);
+		await page.mouse.up();
+	}
 	const dropped = await waitFor(page, `markers.length > ${before}`, 15000);
 	check('osm: long press drops pin via reverse geocode', dropped, await page.evaluate(`[window.__trace, markers.length ? markers[markers.length-1].place.name + ' / ' + markers[markers.length-1].place.formatted_address : null]`));
 	if (dropped) {
 		const pinOk = await page.evaluate(`(function(){var m=markers[markers.length-1]; var p=mapEngine.latLngToContainerPoint(m.place.geometry.location); var r=document.getElementById("map_canvas").getBoundingClientRect(); return {x:p.x+r.left, y:p.y+r.top};})()`);
-		check('osm: pin lands under the finger', Math.abs(pinOk.x - 400) <= 2 && Math.abs(pinOk.y - 400) <= 2, pinOk);
+		check('osm: pin lands under the finger', Math.abs(pinOk.x - at.x) <= 2 && Math.abs(pinOk.y - at.y) <= 2, [pinOk, at]);
 	}
 
 	// drag pans the map (Leaflet native gestures, Enyo handlers must not block it)
