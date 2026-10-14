@@ -21,6 +21,10 @@ self.addEventListener("activate", function (event) {
 	event.waitUntil(self.clients.claim());
 });
 
+/* listing every key is the expensive part, so trim only every TRIM_EVERY tiles */
+var TRIM_EVERY = 100;
+var putsSinceTrim = 0;
+
 function trim(cache) {
 	return cache.keys().then(function (keys) {
 		/* keys come back in insertion order: drop the oldest */
@@ -52,10 +56,10 @@ function rebuild(response) {
 
 function remember(url, response) {
 	return caches.open(TILE_CACHE).then(function (cache) {
-		/* re-adding moves the tile to the end, so trim() drops the least recently seen */
-		return cache.delete(url).then(function () {
-			return cache.put(url, response);
-		}).then(function () {
+		/* put() replaces an older copy and adds it at the end, so trim() drops the least recently seen */
+		return cache.put(url, response).then(function () {
+			if (++putsSinceTrim < TRIM_EVERY) return;
+			putsSinceTrim = 0;
 			return trim(cache);
 		});
 	});
