@@ -11,10 +11,25 @@ const vm = require('vm');
 
 const root = path.join(__dirname, '..', '..');
 
+/* ilib looks in resources/<language>/<region>/, so "zh-TW" is resources/zh/TW/strings.json */
+function stringsFile(lang) {
+	return path.join(root, 'resources', ...lang.split('-'), 'strings.json');
+}
+
+function readStrings(lang) {
+	return JSON.parse(fs.readFileSync(stringsFile(lang), 'utf8'));
+}
+
+/* prefs.lang other than en: $L() translates with the strings.json of that language, as ilib does */
 function loadEngines(prefs) {
+	const lang = (prefs && prefs.lang) || 'en';
+	const strings = lang == 'en' ? {} : readStrings(lang);
+	const $L = (s) => (strings[s] !== undefined ? strings[s] : s);
 	const context = {
 		Prefs: Object.assign({engine: 'osm', mapType: 'OSM', lengthUnits: 'metric', lang: 'en'}, prefs || {}),
-		$L: (s) => s,
+		$L: $L,
+		N_: (s) => s,
+		$LF: (s, values) => String($L(s)).replace(/\{(\w+)\}/g, (all, name) => (values && values[name] !== undefined ? values[name] : all)),
 		enyo: {
 			mixin: (a, b) => Object.assign(a, b),
 			log: () => {},
@@ -147,6 +162,7 @@ test('OSRM response becomes a DirectionsResult-like object', () => {
 	assert.strictEqual(first.start_location.lat(), 52.3791);
 	assert.strictEqual(first.start_point, first.start_location);
 	assert.strictEqual(first.distance.text, '18 m');
+	assert.deepStrictEqual(Array.from(leg.steps, (s) => s.arrival), [false, false, false, false, false, false, true]);
 });
 
 test('OSRM steps get readable instructions', () => {
@@ -156,8 +172,8 @@ test('OSRM steps get readable instructions', () => {
 		'Head northwest on <b>Stationsplein</b>',
 		'Turn left onto <b>IJ-passage</b>',
 		'At the roundabout, take exit 2 onto <b>Museumplein</b>',
-		'Keep slightly left at the fork',
-		'Take the ramp right onto <b>A10</b>',
+		'Keep left at the fork',
+		'Take the ramp on the right onto <b>A10</b>',
 		'Make a U-turn onto <b>Hobbemastraat</b>',
 		'Arrive at your destination'
 	]);
@@ -329,7 +345,7 @@ function straightRoute(c) {
 	const steps = [
 		{instructions: 'Head north on <b>Startweg</b>', start_location: north(0), leg: 0},
 		{instructions: 'Turn left onto <b>Damrak</b>', start_location: north(1000), leg: 0},
-		{instructions: 'Arrive at your destination', start_location: north(2000), leg: 0}
+		{instructions: 'Arrive at your destination', arrival: true, start_location: north(2000), leg: 0}
 	];
 	const path = [[52, 5], [52 + 1000 / 111195, 5], [52 + 2000 / 111195, 5]];
 	return {steps, path, north};
@@ -392,4 +408,83 @@ test('spoken distances are rounded the way people say them', () => {
 	assert.strictEqual(imperial.spokenDistance(100), '300 feet');
 	assert.strictEqual(imperial.spokenDistance(1609.344), '1 mile');
 	assert.strictEqual(imperial.spokenDistance(3218.7), '2 miles');
+});
+
+/* every string the sources hand to $L(), $LF() or N_() */
+function translatableStrings() {
+	const files = [];
+	(function walk(dir) {
+		for (const entry of fs.readdirSync(dir, {withFileTypes: true})) {
+			const file = path.join(dir, entry.name);
+			if (entry.isDirectory()) walk(file);
+			else if (file.endsWith('.js')) files.push(file);
+		}
+	})(path.join(root, 'source'));
+	const keys = new Set();
+	const call = /(?:\$LF?|N_)\(\s*("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g;
+	for (const file of files) {
+		const text = fs.readFileSync(file, 'utf8');
+		let m;
+		while ((m = call.exec(text))) keys.add(m[1][0] == '"' ? JSON.parse(m[1]) : m[1].slice(1, -1));
+	}
+	return keys;
+}
+
+/* every translation there is: resources/nl/strings.json is "nl", resources/zh/TW/strings.json "zh-TW" */
+const languages = (function find(dir, parts) {
+	let found = fs.existsSync(path.join(dir, 'strings.json')) && parts.length ? [parts.join('-')] : [];
+	for (const entry of fs.readdirSync(dir, {withFileTypes: true})) {
+		if (entry.isDirectory()) found = found.concat(find(path.join(dir, entry.name), parts.concat(entry.name)));
+	}
+	return found;
+})(path.join(root, 'resources'), []).filter((l) => l != 'en');
+
+test('every string is translated in every language, with the same placeholders', () => {
+	const keys = translatableStrings();
+	assert.ok(keys.size > 150, 'found the strings: ' + keys.size);
+	assert.ok(keys.has('Turn left onto {road}') && keys.has('Add as stop'));
+	const placeholders = (s) => (String(s).match(/\{\w+\}/g) || []).sort().join(' ');
+	const problems = [];
+	for (const lang of languages) {
+		const strings = readStrings(lang);
+		for (const key of keys) {
+			if (typeof strings[key] != 'string' || !strings[key].trim()) problems.push(lang + ': missing "' + key + '"');
+			else if (placeholders(strings[key]) != placeholders(key)) problems.push(lang + ': placeholders of "' + key + '" -> "' + strings[key] + '"');
+		}
+	}
+	assert.deepStrictEqual(languages.slice().sort(), ['cs', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'sv', 'zh-CN', 'zh-HK', 'zh-TW']);
+	assert.deepStrictEqual(problems, []);
+});
+
+test('directions and spoken guidance in Dutch and German', () => {
+	const nl = loadGuidance({lang: 'nl'});
+	const steps = nl.MapEngines.create('osm').directionsFromOsrm(osrmResponse()).routes[0].legs[0].steps;
+	assert.deepStrictEqual(Array.from(steps, (s) => s.instructions), [
+		'Rijd in noordwestelijke richting over <b>Stationsplein</b>',
+		'Sla linksaf naar <b>IJ-passage</b>',
+		'Neem op de rotonde afslag 2 naar <b>Museumplein</b>',
+		'Houd links aan bij de splitsing',
+		'Neem de oprit rechts naar <b>A10</b>',
+		'Keer om naar <b>Hobbemastraat</b>',
+		'U bent op uw bestemming'
+	]);
+	const {path: route, north} = straightRoute(nl);
+	const translated = Array.from(steps.slice(0, 3), (s, i) => Object.assign({}, s, {start_location: north(i * 1000), arrival: i == 2}));
+	translated[2].instructions = steps[6].instructions;
+	nl.Guidance.start(translated, route, 'DRIVING');
+	assert.deepStrictEqual(Array.from(nl.Guidance.update(north(550))), ['Over 450 meter: sla linksaf naar IJ-passage']);
+	assert.deepStrictEqual(Array.from(nl.Guidance.update(north(950))), ['Nu: sla linksaf naar IJ-passage']);
+	nl.Guidance.update(north(1000));
+	nl.Guidance.update(north(1100));
+	nl.Guidance.update(north(1550));
+	assert.deepStrictEqual(Array.from(nl.Guidance.update(north(1950))), ['U bent op uw bestemming'], 'arrival is not prefixed with "now"');
+	assert.ok(nl.Guidance.arrived);
+
+	const de = loadGuidance({lang: 'de'});
+	const first = de.MapEngines.create('osm').directionsFromOsrm(osrmResponse()).routes[0].legs[0].steps[1].instructions;
+	assert.strictEqual(first, 'Links abbiegen auf <b>IJ-passage</b>');
+	assert.strictEqual(de.Guidance.spokenDistance(1460), '1,5 Kilometer');
+	assert.strictEqual(nl.Guidance.spokenDistance(2000), '2 kilometer');
+	const zh = loadEngines({lang: 'zh-TW'});
+	assert.strictEqual(zh.MapEngines.create('osm').directionsFromOsrm(osrmResponse()).routes[0].legs[0].steps[1].instructions, '左轉進入<b>IJ-passage</b>');
 });

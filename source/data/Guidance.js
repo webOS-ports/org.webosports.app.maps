@@ -96,16 +96,17 @@ var Guidance = {
 		var step = this.steps[this.next];
 		var distance = MapEngines.distance(inPosition, step.start_location);
 		var text = this.plain(step.instructions);
-		var arrival = /^Arrive/.test(text);
+		/* the instruction is translated, so arriving is told by the step, not its text */
+		var arrival = !!step.arrival;
 		if (distance <= this.limits.now && this.announced[this.next] != "now") {
 			this.announced[this.next] = "now";
-			say.push(arrival ? text : $L("Now") + ", " + this.lowerFirst(text));
+			say.push(arrival ? text : $LF("Now, {instruction}", {instruction: this.lowerFirst(text)}));
 			if (this.next == this.steps.length - 1) {
 				this.arrived = true;
 			}
 		} else if (distance <= this.limits.early && distance > this.limits.now && !this.announced[this.next]) {
 			this.announced[this.next] = "early";
-			say.push($L("In") + " " + this.spokenDistance(distance) + ", " + this.lowerFirst(text));
+			say.push($LF("In {distance}, {instruction}", {distance: this.spokenDistance(distance), instruction: this.lowerFirst(text)}));
 		}
 		return say;
 	},
@@ -142,14 +143,23 @@ var Guidance = {
 	spokenDistance: function (inMeters) {
 		if (Prefs.lengthUnits == "imperial") {
 			var feet = inMeters * 3.2808399;
-			if (feet < 1000) return (Math.round(feet / 100) * 100 || 50) + " " + $L("feet");
+			if (feet < 1000) return $LF("{n} feet", {n: Math.round(feet / 100) * 100 || 50});
 			var miles = Math.round(inMeters * 0.000621371192 * 10) / 10;
-			return miles + " " + (miles == 1 ? $L("mile") : $L("miles"));
+			return miles == 1 ? $L("1 mile") : $LF("{n} miles", {n: this.number(miles)});
 		}
 		if (inMeters < 1000) {
-			return (inMeters < 100 ? Math.round(inMeters / 10) * 10 : Math.round(inMeters / 50) * 50) + " " + $L("meters");
+			return $LF("{n} meters", {n: inMeters < 100 ? Math.round(inMeters / 10) * 10 : Math.round(inMeters / 50) * 50});
 		}
-		return (Math.round(inMeters / 100) / 10) + " " + $L("kilometers");
+		return $LF("{n} kilometers", {n: this.number(Math.round(inMeters / 100) / 10)});
+	},
+
+	/* "1,5" where the language writes it so, which is also how its voice reads it */
+	number: function (inValue) {
+		try {
+			return inValue.toLocaleString(Prefs.lang || undefined);
+		} catch (e) {
+			return String(inValue);
+		}
 	},
 
 	/* instructions carry <b> around street names */
@@ -157,7 +167,9 @@ var Guidance = {
 		return String(inHtml || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
 	},
 
+	/* "turn left" inside a sentence; German keeps its capitals (nouns) */
 	lowerFirst: function (inText) {
+		if (/^de\b/.test(Prefs.lang || "")) return inText;
 		return inText.charAt(0).toLowerCase() + inText.slice(1);
 	},
 

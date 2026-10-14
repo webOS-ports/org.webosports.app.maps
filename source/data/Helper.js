@@ -33,6 +33,18 @@ function $L(string) {
    return Localized.getString(string);
 }
 
+/* marks a string for translation where it is defined; $L() translates it where it is used */
+function N_(string) {
+   return string;
+}
+
+/* $L() with {name} placeholders: $LF("Turn left onto {road}", {road: "Damrak"}) */
+function $LF(string, values) {
+   return String($L(string)).replace(/\{(\w+)\}/g, function (all, name) {
+      return (values && values[name] !== undefined) ? values[name] : all;
+   });
+}
+
 
 var atanh = function(x) {
                 return 0.5*Math.log((1+x)/(1-x));

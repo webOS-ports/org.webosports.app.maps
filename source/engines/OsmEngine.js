@@ -378,6 +378,7 @@ MapEngines.register("osm", MapEngines.extend({
 						leg: l,
 						instructions: this.instruction(step, l, osrmRoute.legs.length),
 						maneuver: this.maneuverClass(step),
+						arrival: step.maneuver.type == "arrive",
 						distance: {value: step.distance, text: MapEngines.formatDistance(step.distance)},
 						duration: {value: step.duration, text: MapEngines.formatDuration(step.duration)},
 						start_location: location,
@@ -433,53 +434,87 @@ MapEngines.register("osm", MapEngines.extend({
 		return "straight";
 	},
 	/* inLeg of inLegCount: the arrival at the end of a leg other than the last is a stop */
+	/* whole sentences, so every language can order them its own way: [without road, with road] */
+	instructionTemplates: {
+		turn: {
+			"left": [N_("Turn left"), N_("Turn left onto {road}")],
+			"right": [N_("Turn right"), N_("Turn right onto {road}")],
+			"slight left": [N_("Turn slightly left"), N_("Turn slightly left onto {road}")],
+			"slight right": [N_("Turn slightly right"), N_("Turn slightly right onto {road}")],
+			"sharp left": [N_("Turn sharp left"), N_("Turn sharp left onto {road}")],
+			"sharp right": [N_("Turn sharp right"), N_("Turn sharp right onto {road}")],
+			"straight": [N_("Continue straight"), N_("Continue straight onto {road}")],
+			"uturn": [N_("Make a U-turn"), N_("Make a U-turn onto {road}")]
+		},
+		continueOn: [N_("Continue"), N_("Continue onto {road}")],
+		merge: {
+			"left": [N_("Merge left"), N_("Merge left onto {road}")],
+			"right": [N_("Merge right"), N_("Merge right onto {road}")],
+			"straight": [N_("Merge"), N_("Merge onto {road}")]
+		},
+		onRamp: {
+			"left": [N_("Take the ramp on the left"), N_("Take the ramp on the left onto {road}")],
+			"right": [N_("Take the ramp on the right"), N_("Take the ramp on the right onto {road}")],
+			"straight": [N_("Take the ramp"), N_("Take the ramp onto {road}")]
+		},
+		offRamp: {
+			"left": [N_("Take the exit on the left"), N_("Take the exit on the left onto {road}")],
+			"right": [N_("Take the exit on the right"), N_("Take the exit on the right onto {road}")],
+			"straight": [N_("Take the exit"), N_("Take the exit onto {road}")]
+		},
+		fork: {
+			"left": [N_("Keep left at the fork"), N_("Keep left at the fork onto {road}")],
+			"right": [N_("Keep right at the fork"), N_("Keep right at the fork onto {road}")],
+			"straight": [N_("Keep straight at the fork"), N_("Keep straight at the fork onto {road}")]
+		},
+		roundabout: [N_("At the roundabout, take exit {exit}"), N_("At the roundabout, take exit {exit} onto {road}")],
+		exitRoundabout: [N_("Exit the roundabout"), N_("Exit the roundabout onto {road}")],
+		depart: [N_("Head {heading}"), N_("Head {heading} on {road}")]
+	},
+	/* left, right or straight, for maneuvers that only care about the side */
+	side: function (inModifier) {
+		if (!inModifier) return "straight";
+		if (inModifier.indexOf("left") >= 0) return "left";
+		if (inModifier.indexOf("right") >= 0) return "right";
+		return "straight";
+	},
 	instruction: function (inStep, inLeg, inLegCount) {
 		var m = inStep.maneuver;
 		var road = inStep.name || inStep.ref || "";
-		var onto = road ? " " + $L("onto") + " <b>" + this.escape(road) + "</b>" : "";
-		var direction = this.modifierText(m.modifier);
+		var t = this.instructionTemplates;
+		var values = {road: road ? "<b>" + this.escape(road) + "</b>" : "", exit: m.exit || 1};
+		var pick = function (inPair) {
+			return $LF(inPair[road ? 1 : 0], values);
+		};
 		switch (m.type) {
 			case "depart":
-				return $L("Head") + " " + this.headingText(m.bearing_after) + (road ? " " + $L("on") + " <b>" + this.escape(road) + "</b>" : "");
+				values.heading = this.headingText(m.bearing_after);
+				return pick(t.depart);
 			case "arrive":
-				if (inLegCount && inLeg < inLegCount - 1) return $L("Arrive at stop") + " " + (inLeg + 1);
+				if (inLegCount && inLeg < inLegCount - 1) return $LF("Arrive at stop {n}", {n: inLeg + 1});
 				return $L("Arrive at your destination");
 			case "roundabout":
 			case "rotary":
 			case "roundabout turn":
-				return $L("At the roundabout, take exit") + " " + (m.exit || 1) + onto;
+				return pick(t.roundabout);
 			case "exit roundabout":
 			case "exit rotary":
-				return $L("Exit the roundabout") + onto;
+				return pick(t.exitRoundabout);
 			case "merge":
-				return $L("Merge") + " " + direction + onto;
+				return pick(t.merge[this.side(m.modifier)]);
 			case "on ramp":
-				return $L("Take the ramp") + " " + direction + onto;
+				return pick(t.onRamp[this.side(m.modifier)]);
 			case "off ramp":
-				return $L("Take the exit") + " " + direction + onto;
+				return pick(t.offRamp[this.side(m.modifier)]);
 			case "fork":
-				return $L("Keep") + " " + direction + " " + $L("at the fork") + onto;
+				return pick(t.fork[this.side(m.modifier)]);
 			case "new name":
 			case "continue":
-				if (m.modifier == "uturn") return $L("Make a U-turn") + onto;
-				return $L("Continue") + onto;
+				if (m.modifier == "uturn") return pick(t.turn.uturn);
+				return pick(t.continueOn);
 		}
 		/* turn, end of road, notification, use lane, ... */
-		if (m.modifier == "uturn") return $L("Make a U-turn") + onto;
-		if (m.modifier == "straight" || !m.modifier) return $L("Continue straight") + onto;
-		return $L("Turn") + " " + direction + onto;
-	},
-	modifierText: function (inModifier) {
-		switch (inModifier) {
-			case "left": return $L("left");
-			case "right": return $L("right");
-			case "slight left": return $L("slightly left");
-			case "slight right": return $L("slightly right");
-			case "sharp left": return $L("sharp left");
-			case "sharp right": return $L("sharp right");
-			case "uturn": return $L("around");
-		}
-		return $L("straight");
+		return pick(t.turn[m.modifier] || t.turn.straight);
 	},
 	headingText: function (inBearing) {
 		var names = [$L("north"), $L("northeast"), $L("east"), $L("southeast"), $L("south"), $L("southwest"), $L("west"), $L("northwest")];

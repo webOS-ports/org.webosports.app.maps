@@ -661,7 +661,7 @@ enyo.kind({
 		this.$.routeStops.destroyClientControls();
 		for (var s = 0; s < inStops.length; s++) {
 			this.$.routeStops.createComponent({classes: "route-stop", components: [
-				{classes: "route-stop-name", content: $L("Stop") + " " + (s + 1) + ": " + inStops[s].name},
+				{classes: "route-stop-name", content: $LF("Stop {n}: {name}", {n: s + 1, name: inStops[s].name})},
 				{kind: "onyx.Button", name: "removeStop" + s, classes: "route-stop-remove", content: "\u00d7", stopIndex: s, ontap: "removeStopTap"}
 			]}, {owner: this});
 		}
