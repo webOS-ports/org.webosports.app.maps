@@ -210,6 +210,29 @@
 	background-size: 24px;
 }
 
+/* tab icons: a 24px glyph in the middle of the tab, mid-grey like the tabs of Messaging
+   (whose glyphs are drawn at about 60% opacity); white on the dark active tab */
+.pullout-toolbar .header-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+}
+
+.pullout-toolbar .header-button > .onyx-icon {
+	width: 24px;
+	height: 24px;
+	margin: 0;
+	background-size: 24px 24px;
+	background-position: center;
+	opacity: 0.6;
+}
+
+.pullout-toolbar .header-button.active > .onyx-icon {
+	opacity: 1;
+	filter: invert(1);
+}
+
 .directions-panel {
 	height: auto;
 }
