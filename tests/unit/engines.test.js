@@ -298,3 +298,20 @@ test('route summary and steps add up the legs of a route with stops', () => {
 	const single = {legs: [route.legs[0]]};
 	assert.strictEqual(c.MapEngines.routeSummary(single).duration.text, '5 min');
 });
+
+test('sharing a place: text with an openstreetmap.org link, mailto and sms encoded', () => {
+	const c = loadEngines();
+	vm.runInContext(fs.readFileSync(path.join(root, 'source/data/Share.js'), 'utf8'), c, {filename: 'Share.js'});
+	const place = {name: 'Rijksmuseum', formatted_address: 'Museumstraat 1, Amsterdam',
+		geometry: {location: new c.MapEngines.LatLng(52.36, 4.885222)}};
+	const link = 'https://www.openstreetmap.org/?mlat=52.360000&mlon=4.885222#map=17/52.360000/4.885222';
+	assert.strictEqual(c.Share.osmUrl(place.geometry.location), link);
+	assert.strictEqual(c.Share.text(place), 'Rijksmuseum\nMuseumstraat 1, Amsterdam\n' + link);
+	const mail = new URL(c.Share.mailto(place));
+	assert.strictEqual(mail.protocol, 'mailto:');
+	assert.strictEqual(mail.searchParams.get('subject'), 'Rijksmuseum');
+	assert.strictEqual(mail.searchParams.get('body'), c.Share.text(place));
+	assert.strictEqual(new URL(c.Share.sms(place)).searchParams.get('body'), c.Share.text(place));
+	// a place named after its address does not repeat it
+	assert.strictEqual(c.Share.text({name: 'A', formatted_address: 'A', geometry: place.geometry}), 'A\n' + link);
+});

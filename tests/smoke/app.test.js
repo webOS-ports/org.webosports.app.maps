@@ -330,6 +330,32 @@ async function waitFor(page, fn, timeout = 20000, arg) {
 	await page.evaluate(`(function(p){ p.$.savedlist.select(0); })(${mainView}.$.pullout)`);
 	check('osm: picking a saved place shows it on the map', await waitFor(page, `markers.some(function(m){ return m.place.lunetype == "saved"; })`, 5000));
 
+	// sharing a place from the marker menu
+	await page.evaluate(`(function(v){ v.PlaceMarker([{id: "share-place", name: "Rijksmuseum", formatted_address: "Museumstraat 1", icon: "assets/lune-marker-red-64-64.png", lunetype: "dropped", geometry: {location: mapEngine.latLng(52.3600, 4.8852)}}]); })(${mainView})`);
+	await page.evaluate(`${mainView}.shareOpen()`);
+	check('osm: Share opens the share popup for the place', await page.evaluate(`${mainView}.$.sharePopup.showing && /Rijksmuseum/.test(${mainView}.$.shareTitle.content)`));
+	check('osm: Message is offered on webOS only', await page.evaluate(`${mainView}.$.shareMessage.showing === !!enyo.platform.webos`));
+	await shot(page, '/osm-13-share.png');
+	await page.evaluate(`${mainView}.shareCopy()`);
+	check('osm: Copy puts the place on the clipboard', await page.evaluate(`${mainView}.$.statuspanel.content`) === 'Copied to the clipboard', await page.evaluate(`${mainView}.$.statuspanel.content`));
+	if (!connect) {
+		// a browser lets the test read the clipboard back (WebAppManager refuses clipboard reads)
+		await browser.defaultBrowserContext().overridePermissions(new URL(base).origin, ['geolocation', 'clipboard-read', 'clipboard-write']);
+		const clip = await page.evaluate(`navigator.clipboard.readText()`).catch((e) => 'read failed: ' + e.message);
+		check('osm: the clipboard holds the place and its link', clip === await page.evaluate(`Share.text(${mainView}.sharePlace)`), clip);
+	}
+	// Email: what is handed over (the launch request on webOS, the opened URL in a browser)
+	await page.evaluate(`(function(){ window.__shared = []; var launch = Share.launch; Share.launch = function(id, params, cb){ window.__shared.push({id: id, params: params}); return launch.call(Share, id, params, function(e){ window.__shared.push({result: e || "ok"}); cb(e); }); };
+		var open = window.open; window.open = function(url){ window.__shared.push({url: url}); return null; }; })()`);
+	await page.evaluate(`${mainView}.shareOpen(); ${mainView}.shareEmail()`);
+	await waitFor(page, `window.__shared.length && (window.__shared[0].url || window.__shared.some(function(x){ return x.result; }))`, 10000);
+	const shared = await page.evaluate(`window.__shared`);
+	const mailto = shared[0].url || (shared[0].params && shared[0].params.target) || '';
+	check('osm: Email hands over a mailto: with the place and its link',
+		/^mailto:\?subject=Rijksmuseum&body=/.test(mailto) && decodeURIComponent(mailto).includes('openstreetmap.org/?mlat=52.360000&mlon=4.885200') &&
+		(shared[0].url ? true : shared[0].id === 'com.palm.app.email' && shared.some((x) => x.result === 'ok')), shared);
+	await page.evaluate(`${mainView}.clearMap()`);
+
 	// swap origin and destination
 	await page.evaluate(`(function(v){ v.directRequest.origin = mapEngine.latLng(1, 2); v.directRequest.destination = mapEngine.latLng(3, 4); v.$.directionStart.setValue("A"); v.$.directionEnd.setValue("B"); v.swapDirections(); })(${mainView})`);
 	check('osm: swap origin and destination', await page.evaluate(`(function(v){ return v.directRequest.origin.lat() == 3 && v.directRequest.destination.lat() == 1 && v.$.directionStart.getValue() == "B" && v.$.directionEnd.getValue() == "A"; })(${mainView})`));

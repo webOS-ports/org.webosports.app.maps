@@ -83,6 +83,9 @@ enyo.kind({
 			{kind: "onyx.Icon", classes: "marker-popup-menu-icon", src: "assets/star-orange.png"},
 			{name: "markerSave", classes: "marker-popup-menu-item", content: $L('Save place'), ontap: "toggleSavePlace"},
 			{classes: "onyx-menu-divider"},
+			{kind: "onyx.Icon", classes: "marker-popup-menu-icon", src: "assets/menu-icon-forward.png"},
+			{name: "markerShare", classes: "marker-popup-menu-item", content: $L('Share'), ontap: "shareOpen"},
+			{classes: "onyx-menu-divider"},
 			{kind: "onyx.Icon", classes: "marker-popup-menu-icon", src: "assets/flagA.png"},
 			{name: "markerStart", classes: "marker-popup-menu-item", content: $L('Route from here'), ontap: "routeFromTo"},
 			{classes: "onyx-menu-divider"},
@@ -97,6 +100,13 @@ enyo.kind({
 			{classes: "onyx-menu-divider"},
 			{kind: "onyx.Icon", classes: "marker-popup-menu-icon", src: "assets/delete.png"},
 			{name: "markerRemove", classes: "marker-popup-menu-item", content: $L('Remove'), ontap: "removeMarker"}
+		]},
+		{name: "sharePopup", kind: "onyx.Popup", classes: "share-popup zoom-pre3-text", scrim: true, centered: true, modal: true, floating: true, components: [
+			{name: "shareTitle", classes: "share-title"},
+			{kind: "onyx.Button", name: "shareEmail", classes: "share-button", content: $L("Email"), ontap: "shareEmail"},
+			{kind: "onyx.Button", name: "shareMessage", classes: "share-button", content: $L("Message"), ontap: "shareMessage"},
+			{kind: "onyx.Button", name: "shareCopy", classes: "share-button", content: $L("Copy"), ontap: "shareCopy"},
+			{kind: "onyx.Button", classes: "share-button onyx-dark", content: $L("Cancel"), ontap: "shareClose"}
 		]},
 		{name: "infoDialog", kind: "onyx.Popup", classes: "zoom-pre3-text", scrim: true, centered: true, modal: true, floating: true, components: [
 			{name: "infoDialogContent"},
@@ -1531,6 +1541,41 @@ routeStopsChanged: function() {
 		this.statusPanel($L("Stops") + ": " + this.directRequest.waypoints.length, 2);
 		if (!this.$.directBox.showing) this.toggleSearchDirections("routeFromTo");
 	}
+},
+
+shareOpen: function(inSender, inEvent) {
+	this.sharePlace = this.lastClickedMarker.place;
+	this.$.markerPopup.hide();
+	this.$.markerPopupMenu.hide();
+	this.$.shareTitle.setContent($L("Share") + " " + this.sharePlace.name);
+	/* Messaging takes the text on webOS; a browser has no such app */
+	this.$.shareMessage.setShowing(!!enyo.platform.webos);
+	this.$.sharePopup.show();
+},
+
+shareClose: function() {
+	this.$.sharePopup.hide();
+},
+
+shareDone: function(inError) {
+	this.$.sharePopup.hide();
+	if (inError) {
+		this.statusPanel($L("Could not share") + ": " + inError, 5);
+	}
+},
+
+shareEmail: function() {
+	Share.byEmail(this.sharePlace, this.shareDone.bind(this));
+},
+
+shareMessage: function() {
+	Share.byMessage(this.sharePlace, this.shareDone.bind(this));
+},
+
+shareCopy: function() {
+	var copied = Share.copy(this.sharePlace);
+	this.$.sharePopup.hide();
+	this.statusPanel(copied ? $L("Copied to the clipboard") : $L("Could not copy"), 2);
 },
 
 routeSelect: function(inSender, inEvent) {
