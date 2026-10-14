@@ -395,6 +395,60 @@
 	padding-right: 5px;
 }
 
+/* a settings row: help icon, label, then a toggle on the right or a picker on the line below.
+   The picker rows and the toggle rows (SettingsItem) were laid out differently, so their
+   icons and labels did not line up. */
+.settings .settings-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	padding: 0;
+	margin: 0;
+	line-height: 30px;
+}
+
+/* a SettingsItem sits in the group box itself; a picker row has a wrapper that gives the 8px */
+.settings > .settings-row {
+	padding: 8px;
+}
+
+.settings .settings-row > .labeled-item-icon {
+	flex: none;
+	width: 32px;
+	height: 32px;
+	margin: 0 10px 0 0;
+	padding: 0;
+	background-size: 32px 32px;
+}
+
+.settings .settings-row > .labeled-item-icon + * {
+	flex: 1;
+	min-width: 0;
+}
+
+.settings .settings-row > .settings-item-input {
+	float: none;
+	flex: none;
+	margin-left: 8px;
+}
+
+.settings .settings-row > .onyx-picker-decorator {
+	float: none;
+	flex: 1 0 100%;
+	width: 100%;
+	margin: 6px 0 0 0;
+}
+
+.settings .settings-row > .settings-notice {
+	flex: 1 0 100%;
+}
+
+.settings .settings-row > .onyx-picker-decorator > .lang-picker:not(.onyx-picker) {
+	float: none;
+	width: 100%;
+	margin: 0;
+}
+
 .label-item-input {
 	float: right;
 }

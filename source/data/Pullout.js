@@ -152,7 +152,7 @@ enyo.kind({
 					{kind: "onyx.Groupbox", classes: "settings", components: [
 						{kind: "onyx.GroupboxHeader", content: $L("General settings")},
 						{ components: [
-							{name: "Engine", classes: "onyx-toolbar-inline", components: [
+							{name: "Engine", classes: "settings-row", components: [
 								{kind: "Image", src: "assets/help.png", classes: "labeled-item-icon", ontap: "settingsHelp", help: $L("Selects the map provider used for maps, search, directions and elevation. The app reloads to apply the change.")},
 								{name: "labelEngine", kind: "Control", content: $L("Map engine")},
 								{kind: "onyx.PickerDecorator", classes: "lang-picker", components: [
@@ -164,7 +164,7 @@ enyo.kind({
 						{kind: "SettingsItem", label: $L("Fullscreen"), showing: false, icon: "assets/help.png", help: $L("Switch between fullscreen and normal mode"), name: "FullscreenToggle", defaultKind: "onyx.ToggleButton", onChange: "Fullscreen", onIconTap: "settingsHelp"},
 						//{kind: "LabeledItem", label: "Language", icon: "assets/icon-traffic.png", defaultKind: "onyx.ToggleButton", onChange: "LanguageChange"},
 						{ components: [
-							{name: "Lang", classes: "onyx-toolbar-inline", components: [
+							{name: "Lang", classes: "settings-row", components: [
 								{kind: "Image", src: "assets/help.png", classes: "labeled-item-icon", ontap: "settingsHelp", help: $L("Overrides map API and app language, needs application restart")},
 								{name: "labelLang", kind: "Control", content: $L("Language")},
 								{kind: "onyx.PickerDecorator", classes: "lang-picker", components: [
@@ -177,7 +177,7 @@ enyo.kind({
 							]}
 						]},
 						{ showing: false, components: [				
-							{name: "GPSupdate", classes: "onyx-toolbar-inline", components: [
+							{name: "GPSupdate", classes: "settings-row", components: [
 								{kind: "Image", src: "assets/help.png", classes: "labeled-item-icon", ontap: "settingsHelp", help: $L("Sets how often will be updated the position")},
 								{name: "labelGPS", kind: "Control", content: $L("GPS update interval")},
 								{kind: 'onyx.PickerDecorator', classes: "lang-picker", components: [
@@ -195,7 +195,7 @@ enyo.kind({
 						]},
 						{kind: "onyx.GroupboxHeader", content: $L("Map settings")},
 						{ components: [
-							{name: "Units", classes: "onyx-toolbar-inline", components: [
+							{name: "Units", classes: "settings-row", components: [
 								{kind: "Image", src: "assets/help.png", classes: "labeled-item-icon", ontap: "settingsHelp", help: $L("Units for distances, directions and the scale bar")},
 								{name: "labelUnits", kind: "Control", content: $L("Units")},
 								{kind: "onyx.PickerDecorator", classes: "lang-picker", components: [
@@ -326,6 +326,25 @@ enyo.kind({
 			this.$.settingspanel.hide();
 			this.$.aboutpanel.hide();
 			t.show();
+		}
+	},
+	rendered: function() {
+		this.inherited(arguments);
+		this.fitToWindow();
+		this.resize();
+	},
+	handleResize: function() {
+		this.fitToWindow();
+		this.inherited(arguments);
+	},
+	/* zoom-pre3 makes the 320px panel 480px wide; on a narrower window (Q25, phones) zoom less so it fits */
+	fitToWindow: function() {
+		var node = this.hasNode();
+		if (!node) return;
+		node.style.zoom = "";
+		var zoom = parseFloat(window.getComputedStyle(node).zoom) || 1;
+		if (320 * zoom > window.innerWidth) {
+			node.style.zoom = String(window.innerWidth / 320);
 		}
 	},
 	create: function() {

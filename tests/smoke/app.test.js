@@ -329,6 +329,8 @@ async function waitFor(page, fn, timeout = 20000, arg) {
 	await page.evaluate(`${mainView}.$.pullout.openPullout("settingspanel")`);
 	await sleep(800);
 	check('osm: engine picker lists engines', await page.evaluate(`${mainView}.$.pullout.$.enginePicker.getClientControls().map(function(c){return c.content})`), await page.evaluate(`${mainView}.$.pullout.$.enginePicker.getClientControls().map(function(c){return c.content})`));
+	const panelBox = await page.evaluate(`(function(){var b=${mainView}.$.pullout.hasNode().getBoundingClientRect(); return {left: Math.round(b.left), right: Math.round(b.right), window: window.innerWidth};})()`);
+	check('osm: the open panel fits in the window', panelBox.left >= 0 && panelBox.right <= panelBox.window, panelBox);
 	await shot(page, '/osm-6-settings.png');
 	await page.evaluate(`${mainView}.$.pullout.closePullout()`);
 	await sleep(800);
