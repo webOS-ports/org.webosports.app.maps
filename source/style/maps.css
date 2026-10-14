@@ -211,7 +211,7 @@
 }
 
 /* tab icons: a 24px glyph in the middle of the tab, mid-grey like the tabs of Messaging
-   (whose glyphs are drawn at about 60% opacity); white on the dark active tab */
+   (whose glyphs are drawn at about 60% opacity); white on the blue selected tab */
 .pullout-toolbar .header-button {
 	display: inline-flex;
 	align-items: center;
@@ -388,9 +388,11 @@
 	border-bottom-left-radius: 0px;
 }
 
+/* the selected tab is blue, as in Messaging */
 .pullout-toolbar button.active {
-	background-image: none;
-	background-color: #4c4c4c;
+	background-color: #4a86b8;
+	background-image: -webkit-linear-gradient(top, #306ba3, #6ca6ce);
+	background-image: linear-gradient(to bottom, #306ba3, #6ca6ce);
 }
 
 /* the place details text, kept off the screen edges like the settings groups */
