@@ -1,6 +1,7 @@
 /* an item that contains icon, label and any input control, e.g. onyx.Checkbox, onyx.ToggleButton */
 enyo.kind({
 	name: "SettingsItem",
+	classes: "settings-row",
 	published: {
 		label: "",
 		icon: "",

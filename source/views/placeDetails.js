@@ -10,12 +10,12 @@ enyo.kind({
 		{kind: "Signals", onload: "load", onunload: "cleanup"},
 		{name: "detailspanel", classes: "details zoom-pre3", components: [
 			
-		{kind: "FittableRows", name: "layout", classes: "zoom-pre3", components: [
+		{kind: "FittableRows", name: "layout", components: [
 			{name: "mainPane", kind: "onyx.Toolbar", layoutKind: 'FittableColumnsLayout', components: [
 				{name: "back", kind: "onyx.IconButton", style: "width: 32px; height: 32px", src: "assets/menu-icon-back.png", ontap: "goBack"},
 				{name: "titleOnPane", kind: "enyo.Control", content: "Place Deatils", classes: "truncating-text", ontap: ""}
 			]},
-			{fit: true, name: "details-panel", components: [
+			{fit: true, name: "details-panel", classes: "details-body", components: [
 				{name: "PlaceDetailsImageContainer", components: [
 						{name: "PlaceDetailsImage", classes: "details-image"}
 					]},
@@ -30,6 +30,13 @@ enyo.kind({
 				{tag: "br"},
 				{name: "PlaceDetailsElevation", allowHtml: true, content: "", classes: "item-address", showing: false},
 				{tag: "br"},
+				{name: "PlaceDetailsOpening", showing: false, components: [
+					{classes: "onyx-sample-divider", content: "Opening hours:"},
+					{name: "PlaceDetailsOpeningText", classes: "item-address"},
+					{tag: "br"}
+				]},
+				{name: "PlaceDetailsPhone", kind: "onyx.Button", classes: "onyx-affirmative", style: "margin: 4px;", showing: false, ontap: "openPhone"},
+				{name: "PlaceDetailsWebsite", kind: "onyx.Button", classes: "onyx-blue", style: "margin: 4px; max-width: 90%; overflow: hidden; text-overflow: ellipsis;", showing: false, ontap: "openWebsite"}
 			]},
 		]},
 			
@@ -63,10 +70,11 @@ goBack: function () {
 
 setPlaceDetails: function(place) {
 	
-		var imageUrl = this.getImageForPlace(place);
+		/* no picture area unless the engine has one (Google photo, street view, aerial) */
+		this.$.PlaceDetailsImageContainer.hide();
+		this.getImageForPlace(place);
 	
 		//if (place.photos) {
-			this.$.PlaceDetailsImage.applyStyle("background-image", "url(" + imageUrl + ")");
 			//this.$.PlaceDetailsImage.applyStyle("background", "url(" + place.photos[0].getUrl({'maxWidth': window.innerWidth, 'maxHeight': 150}) + ") center center no-repeat");
 			this.$.PlaceDetailsImage.applyStyle("width", window.innerWidth + "px");
 			this.$.PlaceDetailsImage.applyStyle("height", window.innerHeight/3 + "px");
@@ -80,6 +88,17 @@ setPlaceDetails: function(place) {
 	    
 	    this.$.PlaceDetailsElevation.hide();
 	    this.getElevations([place.geometry.location]);
+	    
+	    /** Contact details (OSM tags or Google place details) **/
+	    this.place = place;
+	    this.$.PlaceDetailsPhone.setContent($L("Call") + " " + (place.formatted_phone_number || ""));
+	    this.$.PlaceDetailsPhone.setShowing(!!place.formatted_phone_number);
+	    this.$.PlaceDetailsWebsite.setContent(place.website || "");
+	    this.$.PlaceDetailsWebsite.setShowing(!!place.website);
+	    /* OSM opening_hours syntax, e.g. "Mo-Fr 09:00-18:00; Sa 10:00-14:00" */
+	    this.$.PlaceDetailsOpeningText.setContent(String(place.opening_hours_text || "").replace(/;\s*/g, "\n"));
+	    this.$.PlaceDetailsOpeningText.applyStyle("white-space", "pre-line");
+	    this.$.PlaceDetailsOpening.setShowing(!!place.opening_hours_text && !place.opening_hours);
 	    
 	    
 	    /** Manage RATING **/
@@ -138,52 +157,18 @@ setPlaceDetails: function(place) {
 	
 	getImageForPlace: function (place) {
 		
-		var url = "icon-256x256.png";
-		
-		if (place.photos) {
-			url = place.photos[0].getUrl({'maxWidth': window.innerWidth, 'maxHeight': Math.round(window.innerHeight/3)});
-		} else {
-			
-			// Check for a street view at the position
-		this.streetViewCheck = new google.maps.StreetViewService();  
-		this.streetViewCheck.getPanoramaByLocation(place.geometry.location, 50, function(result, status) {
-			if (status == "OK") {
-				
-				/* Get an StreetView image */
-				url = "https://maps.googleapis.com/maps/api/streetview?key=AIzaSyBSTvlMEfLkRzgdZbqhv7PsA2MulWjgYNs&size=" + window.innerWidth + "x" + Math.round(window.innerHeight/3) + "&location=" + place.geometry.location.lat() + "," +  place.geometry.location.lng() + "&heading=235";
-				this.$.PlaceDetailsImage.applyStyle("background-image", "url(" + url + ")");
-			
-				
-				}else{
-				
-				/* do nothing */
-				//url = "https://maps.googleapis.com/maps/api/staticmap?size=" + window.innerWidth + "x150&location=" + place.geometry.location.lat() + "," +  place.geometry.location.lng() + "&zoom=11";
-				url = "https://maps.googleapis.com/maps/api/staticmap?key=AIzaSyBSTvlMEfLkRzgdZbqhv7PsA2MulWjgYNs&center=" + place.geometry.location.lat() + "," +  place.geometry.location.lng() + "&zoom=19&size=" + window.innerWidth + "x" + Math.round(window.innerHeight/3) + "&maptype=satellite";
-				this.$.PlaceDetailsImage.applyStyle("background-image", "url(" + url + ")");
-		  
-				}
-			}.bind(this));
-			
-			
-			};
-		
-		return url;		
+		/* the engine calls back only when it has a picture (photo, street view, aerial) */
+		mapEngine.placeImage(place, window.innerWidth, Math.round(window.innerHeight/3), function (inUrl) {
+			this.$.PlaceDetailsImage.applyStyle("background-image", "url(" + inUrl + ")");
+			this.$.PlaceDetailsImageContainer.show();
+		}.bind(this));
 	},
 	
 	getElevations: function (locations) {
 		
-	  var positionalRequest = {
-		'locations': locations
-	  }
-
-	  var resp = elevator.getElevationForLocations(positionalRequest, function(results, status) {
-		if (status == google.maps.ElevationStatus.OK) {
-
-		  if (results[0]) {
-			this.setElevationResults(results);
-		  } else {
-			enyo.log("No results found");
-		  }
+	  mapEngine.elevation(locations[0], function(status, meters) {
+		if (!status) {
+		  this.setElevationResults([{elevation: meters}]);
 		} else {
 		  enyo.log("Elevation service failed due to: " + status);
 		}
@@ -198,6 +183,25 @@ setPlaceDetails: function(place) {
 		
 	},
 	
+	openPhone: function() {
+		this.openTarget("tel:" + String(this.place.formatted_phone_number).replace(/[^+\d]/g, ""));
+	},
+	openWebsite: function() {
+		var url = String(this.place.website);
+		if (!/^https?:\/\//i.test(url)) url = "http://" + url;
+		this.openTarget(url, "org.webosports.app.atlas");
+	},
+	/* hand the target to the system, never navigate the app window itself */
+	openTarget: function(inTarget, inAppId) {
+		enyo.log("Opening ", inTarget);
+		if (enyo.platform.webos) {
+			var params = inAppId ? {id: inAppId, params: {target: inTarget}} : {target: inTarget};
+			new enyo.ServiceRequest({service: "palm://com.palm.applicationManager/", method: "open"}).go(params);
+		} else {
+			window.open(inTarget, "_blank");
+		}
+	},
+
 	openingHoursDetails: function() {
 		this.$.openingHoursPopup.show();
 	}

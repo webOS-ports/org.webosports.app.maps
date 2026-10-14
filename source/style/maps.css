@@ -210,6 +210,29 @@
 	background-size: 24px;
 }
 
+/* tab icons: a 24px glyph in the middle of the tab, mid-grey like the tabs of Messaging
+   (whose glyphs are drawn at about 60% opacity); white on the blue selected tab */
+.pullout-toolbar .header-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+}
+
+.pullout-toolbar .header-button > .onyx-icon {
+	width: 24px;
+	height: 24px;
+	margin: 0;
+	background-size: 24px 24px;
+	background-position: center;
+	opacity: 0.6;
+}
+
+.pullout-toolbar .header-button.active > .onyx-icon {
+	opacity: 1;
+	filter: invert(1);
+}
+
 .directions-panel {
 	height: auto;
 }
@@ -365,9 +388,36 @@
 	border-bottom-left-radius: 0px;
 }
 
-.pullout-toolbar button.active {
-	background-image: none;
-	background-color: #4c4c4c;
+/* the selected tab is blue, as in Messaging; so are the selected Current/Saved list, travel
+   mode and route, instead of the darker onyx blue */
+.pullout-toolbar button.active,
+.bookmark-header .onyx-radiobutton.active,
+.travel-radio .onyx-radiobutton.active,
+.route-choices .route-choice.onyx-blue {
+	background-color: #4a86b8;
+	background-image: -webkit-linear-gradient(top, #306ba3, #6ca6ce);
+	background-image: linear-gradient(to bottom, #306ba3, #6ca6ce);
+	color: #ffffff;
+}
+
+/* travel mode glyphs: mid-grey like the tab icons, white on the selected mode */
+.travel-radio .onyx-radiobutton > .onyx-icon {
+	opacity: 0.6;
+}
+
+.travel-radio .onyx-radiobutton.active > .onyx-icon {
+	opacity: 1;
+	filter: brightness(0) invert(1);
+}
+
+/* the place details text, kept off the screen edges like the settings groups */
+.details-body {
+	padding: 0 10px;
+}
+
+/* .item-name is dark for the light lists; the details background is dark */
+.details-body .item-name {
+	color: #f2f2f2;
 }
 
 .settings {
@@ -393,6 +443,60 @@
 .labeled-item-icon {
 	vertical-align: bottom;
 	padding-right: 5px;
+}
+
+/* a settings row: help icon, label, then a toggle on the right or a picker on the line below.
+   The picker rows and the toggle rows (SettingsItem) were laid out differently, so their
+   icons and labels did not line up. */
+.settings .settings-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	padding: 0;
+	margin: 0;
+	line-height: 30px;
+}
+
+/* a SettingsItem sits in the group box itself; a picker row has a wrapper that gives the 8px */
+.settings > .settings-row {
+	padding: 8px;
+}
+
+.settings .settings-row > .labeled-item-icon {
+	flex: none;
+	width: 32px;
+	height: 32px;
+	margin: 0 10px 0 0;
+	padding: 0;
+	background-size: 32px 32px;
+}
+
+.settings .settings-row > .labeled-item-icon + * {
+	flex: 1;
+	min-width: 0;
+}
+
+.settings .settings-row > .settings-item-input {
+	float: none;
+	flex: none;
+	margin-left: 8px;
+}
+
+.settings .settings-row > .onyx-picker-decorator {
+	float: none;
+	flex: 1 0 100%;
+	width: 100%;
+	margin: 6px 0 0 0;
+}
+
+.settings .settings-row > .settings-notice {
+	flex: 1 0 100%;
+}
+
+.settings .settings-row > .onyx-picker-decorator > .lang-picker:not(.onyx-picker) {
+	float: none;
+	width: 100%;
+	margin: 0;
 }
 
 .label-item-input {
@@ -614,6 +718,11 @@ only screen and (min-device-width : 480px) and (max-device-width : 800px){
 	background:url(../../assets/compass-south.png) center center no-repeat;
 }
 
+/* Leaflet panes start at z-index 200, keep the compass above the markers */
+.leaflet-container #compass {
+	z-index: 650;
+}
+
 #compass {
 	height: 30px;
 	width: 30px;
@@ -697,3 +806,84 @@ background-size: 100% 3600%;
 .roundabout-left{ background: url(../../assets/maneuvers.png) 0px -784px ; }
 .roundabout-right{ background: url(../../assets/maneuvers.png) 0px -924px ; }
 
+
+/* zoom buttons for engines without on-map controls, right side, clear of the grabber */
+.map-zoom-buttons {
+	position: absolute;
+	right: 8px;
+	top: 50%;
+	margin-top: -48px;
+	width: 34px;
+	padding: 4px 2px;
+	z-index: 20;
+	border-radius: 20px;
+	opacity: 0.9;
+}
+
+.map-zoom-buttons .onyx-icon-button {
+	display: block;
+	margin: 4px auto;
+}
+
+/* route alternatives in the directions panel */
+.route-choices {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	padding: 4px;
+}
+
+.route-choices .route-choice {
+	margin: 3px;
+	font-size: 14px;
+	padding: 4px 8px;
+}
+
+/* stops of a route in the directions panel */
+.route-stops {
+	padding: 4px 8px;
+}
+
+.route-stop {
+	display: flex;
+	align-items: center;
+	margin: 2px 0;
+}
+
+.route-stop-name {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.route-stops .route-stop-remove {
+	padding: 2px 10px;
+	margin-left: 6px;
+}
+
+/* sharing a place */
+.share-popup {
+	width: 260px;
+	padding: 10px;
+}
+
+.share-title {
+	font-weight: bold;
+	margin-bottom: 8px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.share-popup .share-button {
+	display: block;
+	width: 100%;
+	margin: 4px 0;
+}
+
+.directions-panel .guidance-button {
+	display: block;
+	margin: 6px auto;
+	width: 90%;
+}

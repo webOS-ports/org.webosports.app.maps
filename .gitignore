@@ -1,0 +1,5 @@
+# output of tools/deploy.sh
+/build/
+/deploy/
+/node_modules/
+*.ipk

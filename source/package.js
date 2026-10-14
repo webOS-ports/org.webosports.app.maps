@@ -6,6 +6,7 @@ enyo.depends(
 	"$lib/webos-lib",
 	"style",
 	"data",
+	"engines",
 	"plugins",
 	"views",
 	"app.js"
