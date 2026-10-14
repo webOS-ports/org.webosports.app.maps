@@ -363,9 +363,7 @@ MapEngines.register("google", MapEngines.extend({
 
 		map.mapTypes.set("OSM", new google.maps.ImageMapType({
 			getTileUrl: function(coord, zoom) {
-				/* tile.openstreetmap.org blocks requests without Referer, see OsmEngine.js */
-				var host = MapEngines.fileOrigin ? "https://tile.openstreetmap.de/" : "https://tile.openstreetmap.org/";
-				return host + zoom + "/" + coord.x + "/" + coord.y + ".png";
+				return "https://tile.openstreetmap.org/" + zoom + "/" + coord.x + "/" + coord.y + ".png";
 			},
 			tileSize: new google.maps.Size(256, 256),
 			isPng: true,

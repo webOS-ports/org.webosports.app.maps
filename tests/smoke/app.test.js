@@ -120,7 +120,7 @@ async function waitFor(page, fn, timeout = 20000, arg) {
 	}
 	check('osm: About shows engine version', await page.evaluate(`${mainView}.$.pullout.$.APIver.content`), await page.evaluate(`${mainView}.$.pullout.$.APIver.content`));
 	check('osm: map type list from engine', await page.evaluate(`!!${mainView}.$.pullout.$.mapTypeOSM && !!${mainView}.$.pullout.$.mapTypeTOPO && !${mainView}.$.pullout.$.mapTypeROADMAP`));
-	check('osm: layer toggles follow the engine (no traffic; transit only with a Referer)', await page.evaluate(`var p=${mainView}.$.pullout.$; !p.trafficToggle.showing && p.transitToggle.showing == !MapEngines.fileOrigin && p.bikeToggle.showing`));
+	check('osm: layer toggles follow the engine (transit and bike, no traffic)', await page.evaluate(`var p=${mainView}.$.pullout.$; !p.trafficToggle.showing && p.transitToggle.showing && p.bikeToggle.showing`));
 	check('osm: transit travel mode + avoid toggles hidden', await page.evaluate(`var p=${mainView}.$.pullout.$; !p.travelTRANSIT.showing && p.travelDRIVING.showing && !p.avoidTollsToggle.showing && p.routeAlternativesToggle.showing`));
 	check('osm: street view menu hidden', await page.evaluate(`!${mainView}.$.markerStreet.showing`));
 	check('osm: attribution shown', await page.evaluate(`(document.querySelector('.leaflet-control-attribution')||{}).textContent||""`), await page.evaluate(`(document.querySelector('.leaflet-control-attribution')||{}).textContent||""`));

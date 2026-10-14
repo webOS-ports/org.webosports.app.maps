@@ -20,7 +20,7 @@ function loadEngines(prefs) {
 			log: () => {},
 			error: () => {}
 		},
-		window: {devicePixelRatio: 1, location: {protocol: (prefs && prefs.protocol) || 'http:'}},
+		window: {devicePixelRatio: 1},
 		console: console
 	};
 	vm.createContext(context);
@@ -121,12 +121,9 @@ test('distance and duration formatting', () => {
 	assert.strictEqual(imperial.formatDistance(1609.344), '1.0 mi');
 });
 
-test('file:// apps get tile servers that accept requests without Referer', () => {
-	const web = loadEngines().MapEngines;
-	const app = loadEngines({protocol: 'file:'}).MapEngines;
-	assert.ok(!web.fileOrigin && app.fileOrigin);
-	assert.ok(web.create('osm').layers.transit, 'OpenRailwayMap works with a Referer');
-	assert.ok(!app.create('osm').layers.transit, 'OpenRailwayMap answers 403 without Referer');
+test('the OSM engine offers transit and bike overlays everywhere', () => {
+	const osm = loadEngines().MapEngines.create('osm');
+	assert.ok(osm.layers.transit && osm.layers.bike && !osm.layers.traffic);
 });
 
 test('query strings drop empty values and encode', () => {

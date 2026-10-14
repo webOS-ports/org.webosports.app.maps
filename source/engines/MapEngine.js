@@ -20,8 +20,6 @@
 var MapEngines = {
 
 	registry: {},
-	/* packaged apps run from file:// and send no Referer, some tile servers refuse that */
-	fileOrigin: (window.location.protocol == "file:"),
 	order: [],
 	defaultEngine: "osm",
 

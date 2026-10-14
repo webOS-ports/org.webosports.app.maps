@@ -9,8 +9,9 @@ The engine is chosen in Settings > Map engine (the app reloads to switch):
 * **OpenStreetMap** (default, no API key): [Leaflet](https://leafletjs.com) 1.9.4 (bundled in `lib/leaflet`),
   OpenStreetMap tiles, [Nominatim](https://nominatim.org) search, [OSRM](https://project-osrm.org) routing
   on the FOSSGIS servers (car, bike, foot) and [Open-Meteo](https://open-meteo.com) elevation.
-  Packaged apps run from `file://` and send no Referer, which tile.openstreetmap.org refuses, so on the
-  device the standard layer comes from tile.openstreetmap.de and the rail (transit) overlay is not offered.
+  The tile servers want to know which application asks for tiles; on LuneOS the web runtime sends a
+  packaged app's own origin, `file://<app id>-webos/`, as the Referer (webruntime with per-app Referer
+  support is required on the device).
 * **Google Maps**: the Google Maps JavaScript API v3 the app always used, with traffic, transit routing and Street View.
 
 Engines live in `source/engines/`; a new provider implements the interface documented in

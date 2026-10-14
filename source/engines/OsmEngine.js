@@ -7,17 +7,16 @@
  * The service URLs can be overridden through Prefs.osmNominatimUrl,
  * Prefs.osmRoutingUrl, Prefs.osmElevationUrl and Prefs.osmTileUrl.
  *
- * tile.openstreetmap.org and OpenRailwayMap refuse requests that carry neither
- * a Referer nor an app specific User-Agent. A packaged app runs from file://,
- * sends no Referer and WebAppManager sends a generic Chrome User-Agent, so on
- * the device the standard layer comes from the OpenStreetMap Germany servers
- * and the rail overlay is not offered.
+ * tile.openstreetmap.org and OpenRailwayMap refuse requests that do not say
+ * which application they come from. A packaged app is a file:// page; the
+ * LuneOS web runtime identifies it with its own origin as the Referer,
+ * file://<app id>-webos/.
  */
 
 MapEngines.register("osm", MapEngines.extend({
 	label: "OpenStreetMap",
 	nativeGestures: true,
-	layers: {transit: !MapEngines.fileOrigin, bike: true},
+	layers: {transit: true, bike: true},
 	travelModes: ["DRIVING", "WALKING", "BICYCLING"],
 	/* the FOSSGIS OSRM profiles have no exclude classes, so avoidTolls/avoidHighways are unsupported */
 	routeOptions: {provideRouteAlternatives: true},
@@ -76,12 +75,6 @@ MapEngines.register("osm", MapEngines.extend({
 				if (Prefs.OSMMapCache) return this.cachedTileLayer();
 				if (Prefs.osmTileUrl) {
 					return L.tileLayer(Prefs.osmTileUrl, {maxZoom: 19, attribution: attribution});
-				}
-				if (MapEngines.fileOrigin) {
-					return L.tileLayer("https://tile.openstreetmap.de/{z}/{x}/{y}.png", {
-						maxZoom: 19,
-						attribution: attribution + ', tiles by <a href="https://www.openstreetmap.de/">OpenStreetMap Deutschland</a>'
-					});
 				}
 				return L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
 					maxZoom: 19,
