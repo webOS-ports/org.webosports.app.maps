@@ -10,7 +10,7 @@ enyo.kind({
 		{kind: "Signals", onload: "load", onunload: "cleanup"},
 		{name: "detailspanel", classes: "details zoom-pre3", components: [
 			
-		{kind: "FittableRows", name: "layout", classes: "zoom-pre3", components: [
+		{kind: "FittableRows", name: "layout", components: [
 			{name: "mainPane", kind: "onyx.Toolbar", layoutKind: 'FittableColumnsLayout', components: [
 				{name: "back", kind: "onyx.IconButton", style: "width: 32px; height: 32px", src: "assets/menu-icon-back.png", ontap: "goBack"},
 				{name: "titleOnPane", kind: "enyo.Control", content: "Place Deatils", classes: "truncating-text", ontap: ""}
