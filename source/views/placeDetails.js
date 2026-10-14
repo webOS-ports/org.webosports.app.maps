@@ -15,7 +15,7 @@ enyo.kind({
 				{name: "back", kind: "onyx.IconButton", style: "width: 32px; height: 32px", src: "assets/menu-icon-back.png", ontap: "goBack"},
 				{name: "titleOnPane", kind: "enyo.Control", content: "Place Deatils", classes: "truncating-text", ontap: ""}
 			]},
-			{fit: true, name: "details-panel", components: [
+			{fit: true, name: "details-panel", classes: "details-body", components: [
 				{name: "PlaceDetailsImageContainer", components: [
 						{name: "PlaceDetailsImage", classes: "details-image"}
 					]},

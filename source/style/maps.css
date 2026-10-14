@@ -370,6 +370,11 @@
 	background-color: #4c4c4c;
 }
 
+/* the place details text, kept off the screen edges like the settings groups */
+.details-body {
+	padding: 0 10px;
+}
+
 .settings {
 	padding: 0px 10px 5px 10px;
 	//margin-top: -2px;
