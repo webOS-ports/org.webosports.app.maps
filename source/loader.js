@@ -17,6 +17,7 @@ var Prefs = {
 			GPSinterval: 5,
 			MapCacheExternal: false,
 			OSMMapCache: false,
+			offlineTiles: true,
 			retina: ((window.devicePixelRatio >= 1.5) ? true : false),
 			lengthUnits: "metric"
 };
@@ -84,7 +85,39 @@ if (storedPrefs) {
 
 var currentPos;
 
+/*
+ * Offline map tiles (sw.js): the tiles the user has looked at stay available
+ * without a network. Only for the OpenStreetMap engine; turning the
+ * preference off removes the worker and the tiles it kept.
+ */
+var TileCache = {
+	name: "tiles-v1",
+	supported: function () {
+		return ("serviceWorker" in navigator) && ("caches" in window);
+	},
+	update: function () {
+		if (!this.supported()) {
+			return;
+		}
+		if (Prefs.offlineTiles && mapEngine.id == "osm") {
+			navigator.serviceWorker.register("sw.js").then(function (inRegistration) {
+				enyo.log("Offline tiles kept by ", inRegistration.scope);
+			}, function (inError) {
+				enyo.log("Offline tiles unavailable: ", inError);
+			});
+		} else {
+			navigator.serviceWorker.getRegistrations().then(function (inRegistrations) {
+				inRegistrations.forEach(function (inRegistration) {
+					inRegistration.unregister();
+				});
+			});
+			window.caches["delete"](this.name);
+		}
+	}
+};
+
 function loadScript() {
+	TileCache.update();
 	/* mapEngine is created from Prefs.engine in source/engines/setup.js */
 	mapEngine.loadApi(initialize);
 }

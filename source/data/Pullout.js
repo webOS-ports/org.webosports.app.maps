@@ -200,6 +200,7 @@ enyo.kind({
 							]}
 						]},
 						{kind: "SettingsItem", label: $L("High DPI tiles"), showing: true, icon: "assets/help.png", help: $L("It uses the tiles for high-dpi devices (e.g. HP Pre3). Only for Google map types."), name: "retina", showing: false, defaultKind: "onyx.ToggleButton", onChange: "retinaTiles", onIconTap: "settingsHelp"},
+						{kind: "SettingsItem", label: $L("Offline map tiles"), showing: false, icon: "assets/help.png", help: $L("Keeps the map tiles you have looked at, up to about 50 MB, so those areas still show without a network connection. Nothing is downloaded in advance."), name: "offlineTiles", defaultKind: "onyx.ToggleButton", onChange: "offlineTilesChange", onIconTap: "settingsHelp"},
 						{kind: "SettingsItem", label: $L("Smart caching"), showing: false, icon: "assets/help.png", help: $L("Enables smart caching, tiles are loaded from local storage and every new tile is saved to local storage for future use. Needs restart."), name: "OSMMapCache", defaultKind: "onyx.ToggleButton", onChange: "cacheOSM", onIconTap: "settingsHelp"},
 						{kind: "SettingsItem", label: $L("Use MapTool cache"), showing: false, icon: "assets/help.png", help: $L("If enabled, the map use the MappingTool cache in /media/internal/.MapTool directory"), name: "MapCacheExternal", defaultKind: "onyx.ToggleButton", onChange: "cacheOSM", onIconTap: "settingsHelp"},
 					]}
@@ -384,8 +385,12 @@ enyo.kind({
 		
 		/* Init available settings */
 		
-		if(enyo.platform.webos) this.$.OSMMapCache.show();
-		if(enyo.platform.webos && Prefs.OSMMapCache) this.$.MapCacheExternal.show();	
+		/* the download manager tile cache is the Google engine's, on legacy webOS */
+		if(enyo.platform.webos && mapEngine.id == "google") this.$.OSMMapCache.show();
+		if(enyo.platform.webos && mapEngine.id == "google" && Prefs.OSMMapCache) this.$.MapCacheExternal.show();
+		this.$.offlineTiles.setShowing(mapEngine.id == "osm" && TileCache.supported());
+		this.$.offlineTiles.value = Prefs.offlineTiles;
+		this.$.offlineTiles.inputChanged();
 		if(enyo.platform.webos) this.$.FullscreenToggle.show();
 		if(enyo.platform.webos) this.$.authorCredits.show();
 		
@@ -553,7 +558,11 @@ enyo.kind({
 		this.$[what].active = value;
 	},
 	GPSUpdateInterval: function(inSender, inEvent) {
-		this.doSavePrefs({GPSinterval: inEvent.selected.value});
+		this.doSavePrefs({prefs: {GPSinterval: inEvent.selected.value}});
+	},
+	offlineTilesChange: function(inSender, inEvent) {
+		this.doSavePrefs({prefs: {offlineTiles: inSender.getValue()}});
+		TileCache.update();
 	},
 	cacheOSM: function(inSender, inEvent) {
 		this.doCacheOSM({value: inSender.getValue(), property: inSender.name});
@@ -561,7 +570,7 @@ enyo.kind({
 		
 	},
 	retinaTiles: function(inSender, inEvent) {
-		this.doSavePrefs({retina: inSender.getValue()});
+		this.doSavePrefs({prefs: {retina: inSender.getValue()}});
 		Prefs.retina = inSender.getValue();
 		if (this.$.mapType.getActive().owner.isRetina) this.doMapTypeSelect({mapType: this.$.mapType.getActive().owner.mapType, isRetina: inSender.getValue()});	
 	},

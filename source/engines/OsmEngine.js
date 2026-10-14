@@ -53,46 +53,39 @@ MapEngines.register("osm", MapEngines.extend({
 			{id: "CYCLOSM", label: $L("CyclOSM"), isRetina: false, icon: "assets/map-type-ocm.png"}
 		];
 	},
+	/* tiles are requested with CORS so the offline cache (sw.js) gets responses it can check and keep */
+	tiles: function (inUrl, inOptions) {
+		inOptions.crossOrigin = true;
+		return L.tileLayer(inUrl, inOptions);
+	},
 	tileLayer: function (inId) {
 		var attribution = this.osmAttribution;
 		switch (inId) {
 			case "HOT":
-				return L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
+				return this.tiles("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
 					maxZoom: 19,
 					attribution: attribution + ', tiles style by <a href="https://www.hotosm.org/">Humanitarian OpenStreetMap Team</a> hosted by <a href="https://openstreetmap.fr/">OpenStreetMap France</a>'
 				});
 			case "TOPO":
-				return L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+				return this.tiles("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
 					maxZoom: 17,
 					attribution: attribution + ', <a href="http://viewfinderpanoramas.org">SRTM</a> | map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)'
 				});
 			case "CYCLOSM":
-				return L.tileLayer("https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png", {
+				return this.tiles("https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png", {
 					maxZoom: 20,
 					attribution: attribution + ', <a href="https://www.cyclosm.org">CyclOSM</a> hosted by <a href="https://openstreetmap.fr/">OpenStreetMap France</a>'
 				});
 			default:
-				if (Prefs.OSMMapCache) return this.cachedTileLayer();
 				if (Prefs.osmTileUrl) {
-					return L.tileLayer(Prefs.osmTileUrl, {maxZoom: 19, attribution: attribution});
+					return this.tiles(Prefs.osmTileUrl, {maxZoom: 19, attribution: attribution});
 				}
-				return L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+				return this.tiles("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
 					maxZoom: 19,
 					attribution: attribution
 				});
 		}
 	},
-	/* the webOS download manager backed tile cache, see OsmMap.js */
-	cachedTileLayer: function () {
-		var cache = new OSMMapType(Prefs);
-		var CachedLayer = L.GridLayer.extend({
-			createTile: function (coords) {
-				return cache.getTile(coords, coords.z, document);
-			}
-		});
-		return new CachedLayer({maxZoom: 18, attribution: this.osmAttribution});
-	},
-
 	createMap: function (inDiv, inOptions, inOnReady) {
 		this.map = L.map(inDiv, {
 			zoomControl: false,
@@ -104,11 +97,11 @@ MapEngines.register("osm", MapEngines.extend({
 		this.map.setView(this.toLeaflet(inOptions.center), inOptions.zoom);
 		this.setMapType(inOptions.mapType);
 		this.overlays = {
-			transit: L.tileLayer("https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png", {
+			transit: this.tiles("https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png", {
 				maxZoom: 19,
 				attribution: 'Transit: <a href="https://www.openrailwaymap.org/">OpenRailwayMap</a> (CC-BY-SA)'
 			}),
-			bike: L.tileLayer("https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm-lite/{z}/{x}/{y}.png", {
+			bike: this.tiles("https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm-lite/{z}/{x}/{y}.png", {
 				maxZoom: 20,
 				attribution: 'Bike: <a href="https://www.cyclosm.org">CyclOSM</a>'
 			})

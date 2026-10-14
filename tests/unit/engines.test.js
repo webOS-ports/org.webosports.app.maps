@@ -212,3 +212,28 @@ test('unsupported travel mode is reported, not sent', () => {
 	osm.route({travelMode: 'TRANSIT', origin: new c.MapEngines.LatLng(0, 0), destination: new c.MapEngines.LatLng(1, 1)}, (e) => { error = e; });
 	assert.ok(error && /not available/.test(error));
 });
+
+test('offline tile cache only takes tile requests of the offered servers', () => {
+	const context = {self: {addEventListener: () => {}}, caches: {}, fetch: () => {}, Response: function () {}};
+	vm.createContext(context);
+	vm.runInContext(fs.readFileSync(path.join(root, 'sw.js'), 'utf8'), context, {filename: 'sw.js'});
+	for (const url of [
+		'https://tile.openstreetmap.org/15/16848/10768.png',
+		'https://a.tile.openstreetmap.fr/hot/15/16848/10768.png',
+		'https://b.tile.opentopomap.org/15/16848/10768.png',
+		'https://c.tile-cyclosm.openstreetmap.fr/cyclosm/15/16848/10768.png',
+		'https://a.tile-cyclosm.openstreetmap.fr/cyclosm-lite/15/16848/10768.png',
+		'https://a.tiles.openrailwaymap.org/standard/15/16848/10768.png'
+	]) {
+		assert.ok(context.isTile(url), url);
+	}
+	for (const url of [
+		'https://nominatim.openstreetmap.org/search?q=Rotterdam',
+		'https://routing.openstreetmap.de/routed-car/route/v1/driving/1,2;3,4',
+		'https://evil.example/tile.openstreetmap.org/15/1/2.png',
+		'http://tile.openstreetmap.org/15/16848/10768.png',
+		'https://tile.openstreetmap.org/15/16848/10768.png?x=1'
+	]) {
+		assert.ok(!context.isTile(url), url);
+	}
+});
