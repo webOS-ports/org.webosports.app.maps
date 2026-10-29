@@ -32,7 +32,7 @@
     },
     "scripts": {
         "test": "npm run test:unit",
-        "test:unit": "node --test tests/unit/engines.test.js",
+        "test:unit": "node --test tests/unit/engines.test.js tests/unit/https.test.js",
         "test:smoke": "tests/smoke/run.sh"
     },
     "dependencies": {}

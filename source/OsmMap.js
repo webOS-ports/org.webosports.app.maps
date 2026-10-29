@@ -40,7 +40,7 @@ getTile: function(coord, zoom, ownerDocument) {
 							  return true;
 							}
 							else {
-							  this.downloadTile("http://tile.openstreetmap.org/" + zoom + "/" + x + "/" + y + ".png", zoom, x, y, ownerDocument);
+							  this.downloadTile("https://tile.openstreetmap.org/" + zoom + "/" + x + "/" + y + ".png", zoom, x, y, ownerDocument);
 							}
 						  }
 						}.bind(this);
@@ -81,7 +81,7 @@ getTile: function(coord, zoom, ownerDocument) {
 
 				refreshTile: function (tile, zoom, x, y, ownerDocument) {
 						var tile = document.getElementById("NoTrans" + zoom.toString() + x.toString() + y.toString());
-						tile.src = "http://tile.openstreetmap.org/" + zoom + "/" + x + "/" + y + ".png";
+						tile.src = "https://tile.openstreetmap.org/" + zoom + "/" + x + "/" + y + ".png";
 				}
 
 			
