@@ -342,7 +342,7 @@ MapEngines.register("google", MapEngines.extend({
 
 		map.mapTypes.set("ROADMAP_HDPI", new google.maps.ImageMapType({
 			getTileUrl: function(coord, zoom) {
-				return "http://mts0.google.com/vt?lyrs=m@216000000,seconds_into_week:-1&x=" + coord.x + "&y=" + coord.y + "&z=" + zoom + "&style=2";
+				return "https://mts0.google.com/vt?lyrs=m@216000000,seconds_into_week:-1&x=" + coord.x + "&y=" + coord.y + "&z=" + zoom + "&style=2";
 			},
 			tileSize: new google.maps.Size(256, 256),
 			isPng: true,
@@ -352,7 +352,7 @@ MapEngines.register("google", MapEngines.extend({
 
 		map.mapTypes.set("TERRAIN_HDPI", new google.maps.ImageMapType({
 			getTileUrl: function(coord, zoom) {
-				return "http://mts0.google.com/vt?lyrs=p@216000000,seconds_into_week:-1&x=" + coord.x + "&y=" + coord.y + "&z=" + zoom + "&style=2";
+				return "https://mts0.google.com/vt?lyrs=p@216000000,seconds_into_week:-1&x=" + coord.x + "&y=" + coord.y + "&z=" + zoom + "&style=2";
 			},
 			tileSize: new google.maps.Size(256, 256),
 			isPng: true,
@@ -362,7 +362,7 @@ MapEngines.register("google", MapEngines.extend({
 
 		map.mapTypes.set("HYBRID_HDPI", new google.maps.ImageMapType({
 			getTileUrl: function(coord, zoom) {
-				return "http://mts0.google.com/vt?lyrs=y@216000000,seconds_into_week:-1&x=" + coord.x + "&y=" + coord.y + "&z=" + zoom + "&style=2";
+				return "https://mts0.google.com/vt?lyrs=y@216000000,seconds_into_week:-1&x=" + coord.x + "&y=" + coord.y + "&z=" + zoom + "&style=2";
 			},
 			tileSize: new google.maps.Size(256, 256),
 			isPng: true,
@@ -418,7 +418,7 @@ MapEngines.register("google", MapEngines.extend({
 		this.transitMapType = new google.maps.ImageMapType({
 			getTileUrl: function(coord, zoom) {
 				/* This URL gets just transit lines on the transparent background */
-				return "http://mts0.googleapis.com/vt?lyrs=a,transit|seconds_into_week:-1&x=" + coord.x + "&y=" + coord.y + "&z=" + zoom + "&style=1";
+				return "https://mts0.googleapis.com/vt?lyrs=a,transit|seconds_into_week:-1&x=" + coord.x + "&y=" + coord.y + "&z=" + zoom + "&style=1";
 			},
 			tileSize: new google.maps.Size(256, 256),
 			isPng: true
@@ -426,7 +426,7 @@ MapEngines.register("google", MapEngines.extend({
 
 		this.trafficMapType = new google.maps.ImageMapType({
 			getTileUrl: function(coord, zoom) {
-				return "http://mts0.googleapis.com/vt?lyrs=h,traffic|seconds_into_week:-1&x=" + coord.x + "&y=" + coord.y + "&z=" + zoom + "&style=3";
+				return "https://mts0.googleapis.com/vt?lyrs=h,traffic|seconds_into_week:-1&x=" + coord.x + "&y=" + coord.y + "&z=" + zoom + "&style=3";
 			},
 			tileSize: new google.maps.Size(256, 256),
 			isPng: true
