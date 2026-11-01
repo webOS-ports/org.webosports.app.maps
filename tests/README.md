@@ -20,10 +20,13 @@ steps, clearing, map types and overlays, and switching engines in both
 directions through the preference (which reloads the app).
 
     npm install
-    npm run test:smoke                       # builds, serves deploy/ and runs headless Chromium
+    GOOGLE_MAPS_API_KEY=<key> npm run test:smoke   # builds, serves deploy/ and runs headless Chromium
     tests/smoke/run.sh /path/to/screenshots  # same, with screenshots
 
-Set `CHROME_BIN` if Chromium is not in one of the usual places.
+Set `CHROME_BIN` if Chromium is not in one of the usual places. The Google
+engine needs a Google Maps API key, which no repository holds: run.sh fills
+`GOOGLE_MAPS_API_KEY` into the built app as the LuneOS build does, and without
+it the app offers only the open engine and the Google checks fail.
 
 `debug.html` cannot be used for the engine switch: Enyo's debug loader fails
 on any page reload (also on master), so the smoke test runs the built app.
