@@ -20,8 +20,14 @@ function readStrings(lang) {
 	return JSON.parse(fs.readFileSync(stringsFile(lang), 'utf8'));
 }
 
-/* prefs.lang other than en: $L() translates with the strings.json of that language, as ilib does */
-function loadEngines(prefs) {
+/* the key the tests build with; the sources carry only the placeholder the build replaces */
+const TEST_GOOGLE_KEY = 'test-key_123';
+
+/* prefs.lang other than en: $L() translates with the strings.json of that language, as ilib does.
+   options.googleKey: what the build puts in place of the Google key placeholder; null leaves it,
+   as a build without GOOGLE_MAPS_API_KEY does */
+function loadEngines(prefs, options) {
+	const googleKey = options && 'googleKey' in options ? options.googleKey : TEST_GOOGLE_KEY;
 	const lang = (prefs && prefs.lang) || 'en';
 	const strings = lang == 'en' ? {} : readStrings(lang);
 	const $L = (s) => (strings[s] !== undefined ? strings[s] : s);
@@ -40,7 +46,11 @@ function loadEngines(prefs) {
 	};
 	vm.createContext(context);
 	for (const file of ['source/engines/MapEngine.js', 'source/engines/OsmEngine.js', 'source/engines/GoogleEngine.js']) {
-		vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8'), context, {filename: file});
+		let source = fs.readFileSync(path.join(root, file), 'utf8');
+		if (googleKey !== null) {
+			source = source.split('"PLACEHOLDER_GOOGLE_MAPS_API_KEY"').join(JSON.stringify(googleKey));
+		}
+		vm.runInContext(source, context, {filename: file});
 	}
 	return context;
 }
@@ -72,6 +82,53 @@ function osrmResponse() {
 		}]
 	};
 }
+
+test('google engine: not offered without a key', () => {
+	const c = loadEngines(undefined, {googleKey: null});
+	assert.deepStrictEqual(Array.from(c.MapEngines.list(), (e) => e.id), ['osm']);
+	/* a saved Prefs.engine of "google" falls back to the open engine */
+	assert.strictEqual(c.MapEngines.create('google').id, 'osm');
+});
+
+test('google engine: not offered with a key that is not one', () => {
+	for (const key of ['', 'two words', 'a&b=c', 'PLACEHOLDER_OTHER']) {
+		const c = loadEngines(undefined, {googleKey: key});
+		assert.deepStrictEqual(Array.from(c.MapEngines.list(), (e) => e.id), ['osm'], JSON.stringify(key));
+	}
+});
+
+test('google engine: the key the build fills in is used for every Google request', () => {
+	const c = loadEngines();
+	assert.strictEqual(c.gAPI, '?key=' + TEST_GOOGLE_KEY + '&v=3');
+	const google = c.MapEngines.create('google');
+	const place = {geometry: {location: new c.MapEngines.LatLng(52.37, 4.89)}};
+	const urls = [];
+	for (const hasStreetView of [true, false]) {
+		google.hasStreetView = (inLatLng, inCallback) => inCallback(hasStreetView);
+		google.placeImage(place, 100, 80, (url) => urls.push(url));
+	}
+	assert.strictEqual(urls.length, 2);
+	for (const url of urls) {
+		assert.ok(url.startsWith('https://maps.googleapis.com/maps/api/'), url);
+		assert.strictEqual(new URL(url).searchParams.get('key'), TEST_GOOGLE_KEY, url);
+	}
+});
+
+test('no Google API key in the app sources', () => {
+	const found = [];
+	const walk = (dir) => {
+		for (const entry of fs.readdirSync(dir, {withFileTypes: true})) {
+			const full = path.join(dir, entry.name);
+			if (entry.isDirectory()) walk(full);
+			else if (/\.(js|json|html)$/.test(entry.name) && /AIza[0-9A-Za-z_-]{35}/.test(fs.readFileSync(full, 'utf8'))) found.push(path.relative(root, full));
+		}
+	};
+	walk(path.join(root, 'source'));
+	for (const file of ['index.html', 'debug.html', 'appinfo.json']) {
+		if (fs.existsSync(path.join(root, file)) && /AIza[0-9A-Za-z_-]{35}/.test(fs.readFileSync(path.join(root, file), 'utf8'))) found.push(file);
+	}
+	assert.deepStrictEqual(found, []);
+});
 
 test('engine registry: osm is the default, google is selectable', () => {
 	const c = loadEngines();

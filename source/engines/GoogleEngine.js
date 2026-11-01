@@ -1,8 +1,20 @@
 /* Google Maps JavaScript API v3 engine - the behaviour the app always had */
 
-var gAPI = "?key=AIzaSyBSTvlMEfLkRzgdZbqhv7PsA2MulWjgYNs&v=3"; //default Google API
+/*
+ * The Google Maps APIs need a key. None is in this repository: the build puts
+ * the builder's own key in place of the placeholder below (GOOGLE_MAPS_API_KEY
+ * in meta-luneos' org.webosports.app.maps.bb). Without one this engine is not
+ * offered and the app stays on the open engine.
+ */
+var gAPIKey = "PLACEHOLDER_GOOGLE_MAPS_API_KEY";
+var gAPI = "?key=" + encodeURIComponent(gAPIKey) + "&v=3";
 
-MapEngines.register("google", MapEngines.extend({
+/* the placeholder is matched by its prefix, so filling it in at build time cannot change this test */
+function googleApiKeyUsable(inKey) {
+	return typeof inKey === "string" && /^[A-Za-z0-9_-]+$/.test(inKey) && inKey.indexOf("PLACEHOLDER_") !== 0;
+}
+
+var GoogleMapEngine = MapEngines.extend({
 	label: "Google Maps",
 	nativeGestures: false,
 	layers: {traffic: true, transit: true, bike: true},
@@ -309,9 +321,9 @@ MapEngines.register("google", MapEngines.extend({
 		this.hasStreetView(location, function (inHasStreetView) {
 			if (inHasStreetView) {
 				/* Get an StreetView image */
-				inCallback("https://maps.googleapis.com/maps/api/streetview?key=AIzaSyBSTvlMEfLkRzgdZbqhv7PsA2MulWjgYNs&size=" + inWidth + "x" + inHeight + "&location=" + location.lat() + "," + location.lng() + "&heading=235");
+				inCallback("https://maps.googleapis.com/maps/api/streetview?key=" + encodeURIComponent(gAPIKey) + "&size=" + inWidth + "x" + inHeight + "&location=" + location.lat() + "," + location.lng() + "&heading=235");
 			} else {
-				inCallback("https://maps.googleapis.com/maps/api/staticmap?key=AIzaSyBSTvlMEfLkRzgdZbqhv7PsA2MulWjgYNs&center=" + location.lat() + "," + location.lng() + "&zoom=19&size=" + inWidth + "x" + inHeight + "&maptype=satellite");
+				inCallback("https://maps.googleapis.com/maps/api/staticmap?key=" + encodeURIComponent(gAPIKey) + "&center=" + location.lat() + "," + location.lng() + "&zoom=19&size=" + inWidth + "x" + inHeight + "&maptype=satellite");
 			}
 		});
 	},
@@ -432,4 +444,8 @@ MapEngines.register("google", MapEngines.extend({
 			isPng: true
 		});
 	}
-}));
+});
+
+if (googleApiKeyUsable(gAPIKey)) {
+	MapEngines.register("google", GoogleMapEngine);
+}
