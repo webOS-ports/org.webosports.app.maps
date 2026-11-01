@@ -13,7 +13,7 @@ const path = require('path');
 const root = path.join(__dirname, '..', '..');
 const FILES = ['source/OsmMap.js', 'source/engines/GoogleEngine.js', 'source/engines/OsmEngine.js'];
 // Yandex's URL is built as "http://vec0" + n + ".maps.yandex.net/...".
-const PLAIN_HTTP_ONLY = ['maptile.maps.svc.ovi.com', 'tile.opencyclemap.org', 'http://vec0'];
+const PLAIN_HTTP_ONLY = ['maptile.maps.svc.ovi.com', 'http://vec0'];
 
 function plainHttpUrls(file) {
 	const src = fs.readFileSync(path.join(root, file), 'utf8');
@@ -29,10 +29,12 @@ for (const file of FILES) {
 	});
 }
 
-test('OpenStreetMap and Google tiles are fetched over HTTPS', () => {
+test('OpenStreetMap, Google and OpenCycleMap tiles are fetched over HTTPS', () => {
 	const osm = fs.readFileSync(path.join(root, 'source/OsmMap.js'), 'utf8');
 	const google = fs.readFileSync(path.join(root, 'source/engines/GoogleEngine.js'), 'utf8');
 	assert.match(osm, /"https:\/\/tile\.openstreetmap\.org\//);
 	assert.match(google, /"https:\/\/mts0\.google\.com\/vt/);
 	assert.match(google, /"https:\/\/mts0\.googleapis\.com\/vt/);
+	assert.match(google, /"https:\/\/tile\.thunderforest\.com\/cycle\//);
+	assert.doesNotMatch(google, /"http:\/\/tile\.opencyclemap\.org/);
 });
