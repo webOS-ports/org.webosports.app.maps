@@ -408,7 +408,8 @@ var GoogleMapEngine = MapEngines.extend({
 
 		map.mapTypes.set("OCM", new google.maps.ImageMapType({
 			getTileUrl: function(coord, zoom) {
-				return "http://tile.opencyclemap.org/cycle/" + zoom + "/" + coord.x + "/" + coord.y + ".png";
+				// tile.opencyclemap.org is an alias of this server, whose certificate does not cover it.
+				return "https://tile.thunderforest.com/cycle/" + zoom + "/" + coord.x + "/" + coord.y + ".png";
 			},
 			tileSize: new google.maps.Size(256, 256),
 			name: "OpenCycleMap",
