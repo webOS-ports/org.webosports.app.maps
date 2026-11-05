@@ -9,8 +9,11 @@
  * every detail of the zooms above it, so an area needs zoom 14 and below
  * only, a fraction of the raster tiles the same area would take.
  *
- * Each area keeps its tiles in a Cache Storage cache of its own and a search
- * index of the names in it; the list of areas is in localStorage. The tiles
+ * Each area keeps its tiles and a search index of the names in it in
+ * IndexedDB (OfflineAreas.IdbCaches); the list of areas is in localStorage.
+ * The web runtime has no Cache Storage for an application's file: pages,
+ * while IndexedDB works there; Cache Storage is only used where there is no
+ * IndexedDB. The tiles
  * are drawn with protomaps-leaflet (lib/protomaps-leaflet) on a canvas, below
  * the raster map, wherever the raster tiles fail.
  */
@@ -36,7 +39,13 @@ var OfflineAreas = {
 	indexes: {},
 
 	supported: function () {
-		return typeof caches != "undefined" && typeof fetch == "function";
+		return this.storage() !== null && typeof fetch == "function";
+	},
+	/* where the tiles are kept: the Cache Storage interface, over IndexedDB where there is one */
+	storage: function () {
+		if (typeof indexedDB != "undefined" && indexedDB) return OfflineAreas.IdbCaches;
+		if (typeof caches != "undefined" && caches) return caches;
+		return null;
 	},
 
 	/* ---------- tile arithmetic (Web Mercator, the scheme of the tile servers) ---------- */
@@ -171,7 +180,7 @@ var OfflineAreas = {
 		}
 		this.persist();
 		delete this.indexes[inId];
-		caches["delete"](this.cacheName(inId)).then(function () {
+		this.storage()["delete"](this.cacheName(inId)).then(function () {
 			if (inCallback) inCallback();
 		}, function (inError) {
 			enyo.log("Cannot delete the tiles of offline area ", inId, ": ", inError);
@@ -187,7 +196,7 @@ var OfflineAreas = {
 		var next = function (inIndex) {
 			if (inIndex >= areas.length) return Promise.resolve(null);
 			var area = areas[inIndex];
-			return caches.open(self.cacheName(area.id)).then(function (inCache) {
+			return self.storage().open(self.cacheName(area.id)).then(function (inCache) {
 				return inCache.match(self.tileUrl(area.template, inZ, inX, inY));
 			}).then(function (inResponse) {
 				return inResponse ? inResponse.arrayBuffer() : next(inIndex + 1);
@@ -330,7 +339,7 @@ var OfflineAreas = {
 			finished = true;
 			if (controller) controller.abort();
 			if (inError) {
-				caches["delete"](self.cacheName(id)).then(function () { inDone(inError); }, function () { inDone(inError); });
+				self.storage()["delete"](self.cacheName(id)).then(function () { inDone(inError); }, function () { inDone(inError); });
 				return;
 			}
 			area.name = inRequest.name || index.areaName(bounds) || self.coordinateName(bounds);
@@ -341,7 +350,7 @@ var OfflineAreas = {
 				inDone(null, area);
 			}, function (inError) {
 				var error = {message: String(inError)};
-				caches["delete"](self.cacheName(id)).then(function () { inDone(error); }, function () { inDone(error); });
+				self.storage()["delete"](self.cacheName(id)).then(function () { inDone(error); }, function () { inDone(error); });
 			});
 		};
 		var fetchTile = function (inTile, inAttempt) {
@@ -406,7 +415,7 @@ var OfflineAreas = {
 				return;
 			}
 			area.template = template;
-			caches.open(self.cacheName(id)).then(function (inCache) {
+			self.storage().open(self.cacheName(id)).then(function (inCache) {
 				cache = inCache;
 				/* ask the runtime not to evict the tiles when space runs low */
 				if (typeof navigator != "undefined" && navigator.storage && navigator.storage.persist) {
@@ -439,7 +448,7 @@ var OfflineAreas = {
 	loadIndex: function (inArea) {
 		if (this.indexes[inArea.id]) return Promise.resolve(this.indexes[inArea.id]);
 		var self = this;
-		return caches.open(this.cacheName(inArea.id)).then(function (inCache) {
+		return this.storage().open(this.cacheName(inArea.id)).then(function (inCache) {
 			return inCache.match(self.indexUrl);
 		}).then(function (inResponse) {
 			return inResponse ? inResponse.json() : [];
@@ -661,5 +670,81 @@ OfflineAreas.Fallback.prototype = {
 		if (this.shown == inShown) return;
 		this.shown = inShown;
 		this.onChange(inShown);
+	}
+};
+
+/*
+ * The part of the Cache Storage interface the offline areas use (open, then
+ * match and put; delete), kept in IndexedDB: one object store whose keys are
+ * [cache name, URL] and whose values are {type, body}, the body an
+ * ArrayBuffer.
+ */
+OfflineAreas.IdbCaches = {
+	dbName: "mapsAppOfflineAreas",
+	storeName: "responses",
+	db: null,
+	openDb: function () {
+		var self = this;
+		if (!this.db) {
+			this.db = new Promise(function (resolve, reject) {
+				var request = indexedDB.open(self.dbName, 1);
+				request.onupgradeneeded = function () {
+					request.result.createObjectStore(self.storeName);
+				};
+				request.onsuccess = function () { resolve(request.result); };
+				request.onerror = function () { reject(request.error); };
+			});
+			this.db["catch"](function () { self.db = null; });
+		}
+		return this.db;
+	},
+	/* runs inWork(store) in one transaction; resolves with what inWork's request gave once it completes */
+	transact: function (inMode, inWork) {
+		var self = this;
+		return this.openDb().then(function (inDb) {
+			return new Promise(function (resolve, reject) {
+				var tx = inDb.transaction(self.storeName, inMode);
+				var request = inWork(tx.objectStore(self.storeName));
+				tx.oncomplete = function () { resolve(request ? request.result : undefined); };
+				tx.onerror = function () { reject(tx.error); };
+				tx.onabort = function () { reject(tx.error || new Error("IndexedDB transaction aborted")); };
+			});
+		});
+	},
+	open: function (inName) {
+		var self = this;
+		var name = String(inName);
+		return Promise.resolve({
+			match: function (inUrl) {
+				return self.transact("readonly", function (inStore) {
+					return inStore.get([name, String(inUrl)]);
+				}).then(function (inValue) {
+					return inValue ? new Response(inValue.body, {headers: {"Content-Type": inValue.type}}) : undefined;
+				});
+			},
+			put: function (inUrl, inResponse) {
+				var type = inResponse.headers.get("Content-Type") || "";
+				return inResponse.arrayBuffer().then(function (inBody) {
+					return self.transact("readwrite", function (inStore) {
+						return inStore.put({type: type, body: inBody}, [name, String(inUrl)]);
+					});
+				}).then(function () {});
+			}
+		});
+	},
+	/* resolves with whether there was anything under inName, as CacheStorage.delete does */
+	"delete": function (inName) {
+		var name = String(inName);
+		/* every [name, url] key: arrays sort after strings, so [name, []] is above any URL */
+		var range = IDBKeyRange.bound([name, ""], [name, []]);
+		return this.transact("readwrite", function (inStore) {
+			var count = inStore.count(range);
+			count.onsuccess = function () {
+				if (count.result) inStore["delete"](range);
+			};
+			return count;
+		}).then(function (inCount) {
+			return inCount > 0;
+		});
 	}
 };

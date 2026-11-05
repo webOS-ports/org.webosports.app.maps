@@ -526,6 +526,10 @@ async function waitFor(page, fn, timeout = 20000, arg) {
 		await page.evaluate(`${pullout}.$.settingspanel.scrollToBottom()`);
 		await sleep(300);
 		await shot(page, '/osm-11-offline-areas.png');
+		// the entries of an area in IndexedDB: what the web runtime keeps for an application's file: pages
+		const stored = (areaId) => `OfflineAreas.IdbCaches.transact("readonly", function(s){ return s.count(IDBKeyRange.bound(["offline-area-${areaId}", ""], ["offline-area-${areaId}", []])); })`;
+		const kept = await page.evaluate(`OfflineAreas.storage() === OfflineAreas.IdbCaches ? ${stored(await page.evaluate(`OfflineAreas.list()[0].id`))} : -1`);
+		check('offline: the tiles and the index are kept in IndexedDB', kept === expected + 1, {kept, expected: expected + 1});
 		page.off('request', onRequest);
 		await page.setRequestInterception(false);
 		await page.setBypassServiceWorker(false);
@@ -567,7 +571,7 @@ async function waitFor(page, fn, timeout = 20000, arg) {
 
 		const id = await page.evaluate(`OfflineAreas.list()[0].id`);
 		await page.evaluate(`(function(p){ var row = p.$.offlineList.getClientControls()[0]; var del = row.getClientControls().filter(function(c){ return c.ontap == "offlineDeleteTap"; })[0]; p.offlineDeleteTap(del); })(${pullout})`);
-		check('offline: Delete removes the area and its tiles', await waitFor(page, `OfflineAreas.list().length == 0 && ${pullout}.$.offlineEmpty.showing ? caches.has("offline-area-${id}").then(function(h){ return !h; }) : false`, 10000));
+		check('offline: Delete removes the area and its tiles', await waitFor(page, `OfflineAreas.list().length == 0 && ${pullout}.$.offlineEmpty.showing ? ${stored(id)}.then(function(n){ return n === 0; }) : false`, 10000));
 	}
 
 	check('osm: tile servers deliver real tiles (no policy block)', tiles.ok > 0 && tiles.bad.length === 0, {ok: tiles.ok, bad: tiles.bad.slice(0, 5)});
