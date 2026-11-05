@@ -400,7 +400,7 @@ test('the OSM engine searches offline when Nominatim cannot be reached', async (
 	assert.strictEqual(found.e, null);
 	assert.deepStrictEqual(Array.from(found.places, (p) => p.name), ['Damrak']);
 	const missing = await new Promise((resolve) => osm.search('Rotterdam', (e, places) => resolve({e, places})));
-	assert.strictEqual(missing.e, 'HTTP 0', 'the network error, not an empty result');
+	assert.strictEqual(missing.e, 'Not found in the downloaded maps', 'said plainly, not as a network error');
 	c.OfflineAreas.areas = [];
 	const none = await new Promise((resolve) => osm.search('Damrak', (e) => resolve(e)));
 	assert.strictEqual(none, 'HTTP 0');
@@ -460,4 +460,91 @@ test('the offline style builds with the bundled protomaps-leaflet and picks the 
 	const place = labels.find((r) => r.dataLayer == 'place');
 	assert.ok(place.filter(5, road('city')));
 	assert.ok(!place.filter(13, road('neighbourhood')) && place.filter(14, road('neighbourhood')));
+});
+
+test('a raster tile is covered where a stored tile at or above it exists, not only inside the area', () => {
+	const c = load();
+	c.OfflineAreas.areas = [{id: 'a', bounds: AMSTERDAM, minZoom: 5, maxZoom: 14}];
+	const A = c.OfflineAreas;
+	/* Haarlem, 20 km west: outside the area, but in its zoom-10 tile */
+	const haarlem = (z) => ({x: A.tileX(4.64, z), y: A.tileY(52.38, z)});
+	assert.ok(A.hasTile(A.areas[0], 10, haarlem(10).x, haarlem(10).y), 'the test needs Haarlem in the stored zoom-10 tile');
+	assert.ok(!A.hasTile(A.areas[0], 14, haarlem(14).x, haarlem(14).y));
+	assert.strictEqual(A.areaCovering(16, haarlem(16).x, haarlem(16).y), A.areas[0]);
+	/* Berlin: no stored tile down to zoom 5 */
+	assert.strictEqual(A.areaCovering(16, A.tileX(13.4, 16), A.tileY(52.52, 16)), null);
+	/* a raster zoom above the stored ones */
+	assert.strictEqual(A.areaCovering(18, A.tileX(4.89, 18), A.tileY(52.37, 18)), A.areas[0]);
+	const changes = [];
+	const f = new A.Fallback((shown) => changes.push(shown));
+	f.loading();
+	f.tileError(16, haarlem(16).x, haarlem(16).y);
+	assert.deepStrictEqual(changes, [true], 'a failing tile next to an area shows the coarser map');
+});
+
+test('a tile that was not downloaded is drawn from the nearest stored tile above it', async () => {
+	const c = load();
+	const A = c.OfflineAreas;
+	/* one stored tile, 12/2103/1346, with a lake in its south-east quarter and a town in its north-west one */
+	const parentTile = encodeTile({
+		water: [{type: 'polygon', path: [[2048, 2048], [4096, 2048], [4096, 4096], [2048, 4096], [2048, 2048]], props: {class: 'lake'}}],
+		place: [{type: 'point', at: [1000, 1000], props: {name: 'Noord', class: 'town'}}]
+	});
+	const reads = [];
+	A.getTile = (z, x, y) => { reads.push(z + '/' + x + '/' + y); return Promise.resolve(z == 12 && x == 2103 && y == 1346 ? parentTile : null); };
+	A.areas = [{id: 'a', bounds: AMSTERDAM, minZoom: 5, maxZoom: 14, template: TEMPLATE}];
+	c.protomapsL = Object.assign({}, c.protomapsL, {
+		leafletLayer: (options) => ({options, views: new Map([['', {tileCache: {source: new c.protomapsL.PmtilesSource(options.url, false)}}]])})
+	});
+	const source = c.OfflineAreas.leafletLayers()[0].views.get('').tileCache.source;
+	/* 14/8415/5387 is the south-east corner of the parent: all lake, no town */
+	const se = await source.get({z: 14, x: 8415, y: 5387}, 512);
+	assert.ok(se.has('water') && se.has('background') && !se.has('place'), plain(Array.from(se.keys())));
+	const lake = se.get('water')[0];
+	assert.ok(lake.bbox.minX <= 0 && lake.bbox.minY <= 0 && lake.bbox.maxX >= 512 && lake.bbox.maxY >= 512, 'the lake covers the child: ' + JSON.stringify(lake.bbox));
+	/* 14/8412/5384 is the north-west corner: the town, at 1000/4096 of the parent = 1000 px of 512 * 4 */
+	const nw = await source.get({z: 14, x: 8412, y: 5384}, 512);
+	assert.ok(nw.has('place') && !nw.has('water'));
+	const town = nw.get('place')[0].geom[0][0];
+	assert.deepStrictEqual([Math.round(town.x), Math.round(town.y)], [500, 500]);
+	/* the 16 children of the parent read it once, the two above included */
+	for (let x = 8412; x < 8416; x++) for (let y = 5384; y < 5388; y++) await source.get({z: 14, x, y}, 512);
+	assert.strictEqual(reads.filter((r) => r == '12/2103/1346').length, 1, reads.join(' '));
+	/* nothing stored up to zoom 5: empty, no background */
+	A.getTile = () => Promise.resolve(null);
+	const far = await source.get({z: 14, x: 100, y: 100}, 512);
+	assert.strictEqual(far.size, 0);
+});
+
+test('the memo of parent tiles keeps the last few and forgets failures', async () => {
+	const c = load();
+	const memo = new c.OfflineAreas.TileMemo(2);
+	let made = 0;
+	const make = () => { made++; return Promise.resolve(made); };
+	await memo.get({z: 1, x: 0, y: 0}, make);
+	await memo.get({z: 1, x: 0, y: 0}, make);
+	assert.strictEqual(made, 1);
+	await memo.get({z: 1, x: 1, y: 0}, make);
+	await memo.get({z: 1, x: 1, y: 1}, make);
+	await memo.get({z: 1, x: 0, y: 0}, make);
+	assert.strictEqual(made, 4, 'the oldest is dropped');
+	const failing = memo.get({z: 2, x: 0, y: 0}, () => Promise.reject(new Error('x')));
+	await assert.rejects(failing);
+	await memo.get({z: 2, x: 0, y: 0}, make);
+	assert.strictEqual(made, 5, 'a failure is tried again');
+});
+
+test('offline search finds the street of an address', () => {
+	const c = load();
+	const I = c.OfflineAreas.Index;
+	const areas = [{id: 'a', name: 'Utrecht'}];
+	const indexes = [[['Oudegracht', 52.09, 5.12, 'transportation_name:minor'], ['Café 12', 52.09, 5.12, 'poi:cafe']]];
+	const names = (q) => Array.from(I.search(q, areas, indexes, null, 10), (p) => p.name);
+	assert.deepStrictEqual(names('Oudegracht 12'), ['Oudegracht']);
+	assert.deepStrictEqual(names('oudegracht 12a, Utrecht'), ['Oudegracht']);
+	assert.deepStrictEqual(names('12 Oudegracht'), ['Oudegracht']);
+	assert.deepStrictEqual(names('cafe 12'), ['Café 12'], 'a name with a number is found as typed first');
+	assert.deepStrictEqual(names('Biltstraat 3'), []);
+	assert.strictEqual(I.streetQuery('Oudegracht'), '', 'nothing else to try');
+	assert.strictEqual(I.streetQuery('Oudegracht 12-14, Utrecht'), 'oudegracht');
 });

@@ -297,6 +297,7 @@
 	"{n} meters": "{n} 米",
 	"{n} miles": "{n} 英里",
 	"Offline maps": "离线地图",
+	"Not found in the downloaded maps": "在已下载的地图中未找到",
 	"Downloads the map of the area on the screen from OpenFreeMap, so it shows without a network connection, and search finds the places in it. A download is at most 3000 tiles and 50 MB; for a larger area, choose less detail.": "从 OpenFreeMap 下载屏幕上区域的地图，无网络连接时也能显示，搜索也能找到其中的地点。每次下载最多 3000 个图块和 50 MB；区域较大时请选择较少细节。",
 	"Detail": "细节",
 	"Streets": "街道",

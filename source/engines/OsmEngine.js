@@ -336,15 +336,21 @@ MapEngines.register("osm", MapEngines.extend({
 			inCallback(null, places);
 		}.bind(this));
 	},
-	/* Nominatim could not be reached (or failed): look in the downloaded areas, else report inError */
+	/*
+	 * Nominatim could not be reached (or failed): look in the downloaded
+	 * areas. Without any, or when they cannot be read, report inError; when
+	 * they do not have it, say so.
+	 */
 	searchOffline: function (inQuery, inError, inCallback) {
 		if (!OfflineAreas.supported() || !OfflineAreas.list().length) {
 			inCallback(inError);
 			return;
 		}
 		OfflineAreas.search(inQuery, this.getCenter(), function (inOfflineError, inPlaces) {
-			if (inOfflineError || !inPlaces.length) {
+			if (inOfflineError) {
 				inCallback(inError);
+			} else if (!inPlaces.length) {
+				inCallback($L("Not found in the downloaded maps"));
 			} else {
 				inCallback(null, inPlaces);
 			}

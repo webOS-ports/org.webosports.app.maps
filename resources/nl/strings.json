@@ -342,6 +342,7 @@
 	"{n} meters": "{n} meter",
 	"{n} miles": "{n} mijl",
 	"Offline maps": "Offline kaarten",
+	"Not found in the downloaded maps": "Niet gevonden in de gedownloade kaarten",
 	"Downloads the map of the area on the screen from OpenFreeMap, so it shows without a network connection, and search finds the places in it. A download is at most 3000 tiles and 50 MB; for a larger area, choose less detail.": "Downloadt de kaart van het gebied op het scherm van OpenFreeMap, zodat die zonder netwerkverbinding te zien is en zoeken de plaatsen erin vindt. Een download is ten hoogste 3000 tegels en 50 MB; kies voor een groter gebied minder detail.",
 	"Detail": "Detail",
 	"Streets": "Straten",

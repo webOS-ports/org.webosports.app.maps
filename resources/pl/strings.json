@@ -281,6 +281,7 @@
 	"{n} meters": "{n} metrów",
 	"{n} miles": "{n} mil",
 	"Offline maps": "Mapy offline",
+	"Not found in the downloaded maps": "Nie znaleziono w pobranych mapach",
 	"Downloads the map of the area on the screen from OpenFreeMap, so it shows without a network connection, and search finds the places in it. A download is at most 3000 tiles and 50 MB; for a larger area, choose less detail.": "Pobiera z OpenFreeMap mapę obszaru widocznego na ekranie, aby była widoczna bez połączenia z siecią, a wyszukiwanie znajdowało miejsca na niej. Jedno pobranie to najwyżej 3000 kafelków i 50 MB; dla większego obszaru wybierz mniej szczegółów.",
 	"Detail": "Szczegóły",
 	"Streets": "Ulice",

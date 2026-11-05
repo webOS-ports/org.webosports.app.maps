@@ -358,6 +358,7 @@
 	"{n} meters": "{n} meter",
 	"{n} miles": "{n} miles",
 	"Offline maps": "Offlinekartor",
+	"Not found in the downloaded maps": "Hittades inte i de nedladdade kartorna",
 	"Downloads the map of the area on the screen from OpenFreeMap, so it shows without a network connection, and search finds the places in it. A download is at most 3000 tiles and 50 MB; for a larger area, choose less detail.": "Hämtar kartan över området på skärmen från OpenFreeMap, så att den visas utan nätverksanslutning och sökningen hittar platserna i den. En hämtning är högst 3000 rutor och 50 MB; välj mindre detaljer för ett större område.",
 	"Detail": "Detaljer",
 	"Streets": "Gator",

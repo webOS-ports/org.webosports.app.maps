@@ -343,6 +343,7 @@
 	"{n} meters": "{n} 公尺",
 	"{n} miles": "{n} 英里",
 	"Offline maps": "離線地圖",
+	"Not found in the downloaded maps": "在已下載的地圖中找不到",
 	"Downloads the map of the area on the screen from OpenFreeMap, so it shows without a network connection, and search finds the places in it. A download is at most 3000 tiles and 50 MB; for a larger area, choose less detail.": "從 OpenFreeMap 下載螢幕上區域的地圖，沒有網路連線時也能顯示，搜尋也能找到其中的地點。每次下載最多 3000 個圖塊和 50 MB；區域較大時請選擇較少細節。",
 	"Detail": "細節",
 	"Streets": "街道",

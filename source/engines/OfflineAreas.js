@@ -127,14 +127,14 @@ var OfflineAreas = {
 		}
 		return null;
 	},
-	/* an area that tile z/x/y (of any zoom) overlaps, if any */
-	areaOverlapping: function (inZ, inX, inY) {
-		var north = this.tileLat(inY, inZ), south = this.tileLat(inY + 1, inZ);
-		var west = this.tileLng(inX, inZ), east = this.tileLng(inX + 1, inZ);
+	/* the area with a stored tile at or above raster tile z/x/y: its map can be drawn there, if only coarsely */
+	areaCovering: function (inZ, inX, inY) {
 		var areas = this.list();
 		for (var i = 0; i < areas.length; i++) {
-			var b = areas[i].bounds;
-			if (south <= b.north && north >= b.south && west <= b.east && east >= b.west) return areas[i];
+			for (var z = Math.min(inZ, areas[i].maxZoom); z >= areas[i].minZoom; z--) {
+				var shift = inZ - z;
+				if (this.hasTile(areas[i], z, Math.floor(inX / Math.pow(2, shift)), Math.floor(inY / Math.pow(2, shift)))) return areas[i];
+			}
 		}
 		return null;
 	},
@@ -269,22 +269,77 @@ var OfflineAreas = {
 				labelRules: OfflineStyle.labelRules(),
 				attribution: self.attribution
 			}, inOptions || {}));
-			self.addBackground(layer);
+			self.wrapSource(layer);
 			return layer;
 		});
 	},
-	/* a "background" feature covering every tile an area has, so land is drawn and the rest stays empty */
-	addBackground: function (inLayer) {
+	/*
+	 * Around what protomaps-leaflet reads from a layer's source:
+	 * - a tile that was not downloaded is drawn from the nearest stored tile
+	 *   above it (lower zoom: fewer details, but no empty map next to an area);
+	 * - a "background" feature covers every tile that has data, so land is
+	 *   drawn and the rest stays empty.
+	 */
+	wrapSource: function (inLayer) {
 		inLayer.views.forEach(function (inView) {
 			var source = inView.tileCache.source;
 			var get = source.get;
-			source.get = function (inZxy, inTileSize) {
+			var parents = new OfflineAreas.TileMemo(8);
+			var getOrParent = function (inZxy, inTileSize) {
 				return get.call(source, inZxy, inTileSize).then(function (inLayers) {
+					if (inLayers.size || inZxy.z <= OfflineAreas.minZoom) return inLayers;
+					var parent = {z: inZxy.z - 1, x: Math.floor(inZxy.x / 2), y: Math.floor(inZxy.y / 2)};
+					return parents.get(parent, function () { return getOrParent(parent, inTileSize); }).then(function (inParent) {
+						return OfflineAreas.childOf(inParent, parent, inZxy, inTileSize);
+					});
+				});
+			};
+			source.get = function (inZxy, inTileSize) {
+				return getOrParent(inZxy, inTileSize).then(function (inLayers) {
 					if (inLayers.size) inLayers.set("background", [OfflineAreas.square(inTileSize)]);
 					return inLayers;
 				});
 			};
 		});
+	},
+	/*
+	 * The features of inParentLayers (tile inParent) that reach into its
+	 * descendant tile inChild, in inChild's coordinates. Points are scaled
+	 * with the clone(), mult() and add() of the decoder's points.
+	 */
+	childOf: function (inParentLayers, inParent, inChild, inTileSize) {
+		var scale = Math.pow(2, inChild.z - inParent.z);
+		var offset = {
+			x: -(inChild.x - inParent.x * scale) * inTileSize,
+			y: -(inChild.y - inParent.y * scale) * inTileSize
+		};
+		/* features just outside still draw their edges and labels into the tile */
+		var margin = inTileSize / 8;
+		var layers = new Map();
+		inParentLayers.forEach(function (inFeatures, inName) {
+			if (inName == "background") return;
+			var kept = [];
+			for (var i = 0; i < inFeatures.length; i++) {
+				var f = inFeatures[i];
+				var b = f.bbox;
+				var bbox = {
+					minX: b.minX * scale + offset.x, minY: b.minY * scale + offset.y,
+					maxX: b.maxX * scale + offset.x, maxY: b.maxY * scale + offset.y
+				};
+				if (bbox.maxX < -margin || bbox.maxY < -margin || bbox.minX > inTileSize + margin || bbox.minY > inTileSize + margin) continue;
+				kept.push({
+					props: f.props,
+					geomType: f.geomType,
+					numVertices: f.numVertices,
+					bbox: bbox,
+					geom: f.geom.map(function (inRing) {
+						return inRing.map(function (inPoint) { return inPoint.clone().mult(scale).add(offset); });
+					})
+				});
+			}
+			if (kept.length) layers.set(inName, kept);
+		});
+		return layers;
 	},
 	square: function (inSize) {
 		/* the little of @mapbox/point-geometry that protomaps-leaflet uses on tile geometry */
@@ -594,8 +649,26 @@ OfflineAreas.Index.match = function (inQuery, inName) {
 	return 1;
 };
 /* inIndexes[i] belongs to inAreas[i]; returns places shaped like the other engines' */
+/*
+ * What to look for when the query as typed finds nothing: the part before a
+ * comma, without house numbers ("Oudegracht 12a, Utrecht" -> "oudegracht"),
+ * as the index has streets but no addresses. "" when that is the query itself.
+ */
+OfflineAreas.Index.streetQuery = function (inQuery) {
+	var street = OfflineAreas.Index.normalize(String(inQuery).split(",")[0]).split(" ").filter(function (inWord) {
+		return !/^\d+[a-z]?$/.test(inWord);
+	}).join(" ");
+	return (street == OfflineAreas.Index.normalize(inQuery)) ? "" : street;
+};
 OfflineAreas.Index.search = function (inQuery, inAreas, inIndexes, inCenter, inLimit) {
-	var query = OfflineAreas.Index.normalize(inQuery);
+	var places = OfflineAreas.Index.searchFor(OfflineAreas.Index.normalize(inQuery), inAreas, inIndexes, inCenter, inLimit);
+	var street = OfflineAreas.Index.streetQuery(inQuery);
+	if (!places.length && street) {
+		places = OfflineAreas.Index.searchFor(street, inAreas, inIndexes, inCenter, inLimit);
+	}
+	return places;
+};
+OfflineAreas.Index.searchFor = function (query, inAreas, inIndexes, inCenter, inLimit) {
 	var hits = [];
 	for (var a = 0; a < inIndexes.length; a++) {
 		var entries = inIndexes[a] || [];
@@ -658,7 +731,7 @@ OfflineAreas.Fallback.prototype = {
 	},
 	/* a raster tile z/x/y failed */
 	tileError: function (inZ, inX, inY) {
-		if (!OfflineAreas.areaOverlapping(inZ, inX, inY)) return;
+		if (!OfflineAreas.areaCovering(inZ, inX, inY)) return;
 		this.errors++;
 		this.set(true);
 	},
@@ -746,5 +819,27 @@ OfflineAreas.IdbCaches = {
 		}).then(function (inCount) {
 			return inCount > 0;
 		});
+	}
+};
+
+/* the last inSize results of inMake() by tile, so the children of one parent tile decode it once */
+OfflineAreas.TileMemo = function (inSize) {
+	this.size = inSize;
+	this.keys = [];
+	this.values = {};
+};
+OfflineAreas.TileMemo.prototype = {
+	get: function (inZxy, inMake) {
+		var key = inZxy.z + "/" + inZxy.x + "/" + inZxy.y;
+		if (this.values.hasOwnProperty(key)) return this.values[key];
+		var value = this.values[key] = inMake();
+		this.keys.push(key);
+		if (this.keys.length > this.size) delete this.values[this.keys.shift()];
+		var self = this;
+		/* a failure is not kept */
+		value["catch"](function () {
+			if (self.values[key] === value) delete self.values[key];
+		});
+		return value;
 	}
 };

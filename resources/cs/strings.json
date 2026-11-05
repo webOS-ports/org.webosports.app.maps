@@ -361,6 +361,7 @@
 	"{n} meters": "{n} metrů",
 	"{n} miles": "{n} mil",
 	"Offline maps": "Offline mapy",
+	"Not found in the downloaded maps": "Nenalezeno ve stažených mapách",
 	"Downloads the map of the area on the screen from OpenFreeMap, so it shows without a network connection, and search finds the places in it. A download is at most 3000 tiles and 50 MB; for a larger area, choose less detail.": "Stáhne z OpenFreeMap mapu oblasti na obrazovce, aby se zobrazila i bez síťového připojení a hledání v ní našlo místa. Jedno stažení má nejvýše 3000 dlaždic a 50 MB; pro větší oblast zvolte méně podrobností.",
 	"Detail": "Podrobnost",
 	"Streets": "Ulice",
