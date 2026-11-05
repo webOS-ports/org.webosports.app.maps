@@ -295,5 +295,21 @@
 	"{n} feet": "{n} 英尺",
 	"{n} kilometers": "{n} 公里",
 	"{n} meters": "{n} 米",
-	"{n} miles": "{n} 英里"
+	"{n} miles": "{n} 英里",
+	"Offline maps": "离线地图",
+	"Downloads the map of the area on the screen from OpenFreeMap, so it shows without a network connection, and search finds the places in it. A download is at most 3000 tiles and 50 MB; for a larger area, choose less detail.": "从 OpenFreeMap 下载屏幕上区域的地图，无网络连接时也能显示，搜索也能找到其中的地点。每次下载最多 3000 个图块和 50 MB；区域较大时请选择较少细节。",
+	"Detail": "细节",
+	"Streets": "街道",
+	"Towns": "城镇",
+	"Region": "地区",
+	"Download the area on the map": "下载地图上的区域",
+	"No offline areas yet. Move the map to an area, then download it.": "还没有离线区域。将地图移到一个区域，然后下载。",
+	"Downloaded {name}": "已下载 {name}",
+	"The area is too large: {count} tiles, at most {max}. Zoom in or choose less detail.": "区域太大：{count} 个图块，最多 {max} 个。请放大或选择较少细节。",
+	"The area is larger than {max}. Zoom in or choose less detail.": "区域超过 {max}。请放大或选择较少细节。",
+	"Download failed: {error}": "下载失败：{error}",
+	"Downloading: {done} of {total} tiles, {size}": "正在下载：{done}/{total} 个图块，{size}",
+	"Zoom {min} to {max}, {count} tiles, {size}": "缩放 {min} 至 {max}，{count} 个图块，{size}",
+	"Delete": "删除",
+	"Show": "显示"
 }

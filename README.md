@@ -12,6 +12,13 @@ The engine is chosen in Settings > Map engine (the app reloads to switch):
   The tile servers want to know which application asks for tiles; on LuneOS the web runtime sends a
   packaged app's own origin, `file://<app id>-webos/`, as the Referer (webruntime with per-app Referer
   support is required on the device).
+  Offline maps: Settings > Offline maps downloads the area on the screen as
+  [OpenFreeMap](https://openfreemap.org) vector tiles (OpenMapTiles schema, up to zoom 14) into the
+  app's Cache Storage. Without a network the map draws those areas wherever the tiles do not load, with
+  [protomaps-leaflet](https://github.com/protomaps/protomaps-leaflet) 5.1.0 (BSD-3-Clause, bundled in
+  `lib/protomaps-leaflet` with the licences of what it bundles), and search finds the names in them
+  when Nominatim cannot be reached. OpenFreeMap allows such downloads of at most 3000 tiles or 50 MB,
+  with at most 4 parallel requests; the OpenStreetMap tile servers do not allow them at all.
 * **Google Maps**: the Google Maps JavaScript API v3 the app always used, with traffic, transit routing and Street View.
 
 Engines live in `source/engines/`; a new provider implements the interface documented in

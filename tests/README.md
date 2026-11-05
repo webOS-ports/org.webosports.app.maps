@@ -6,6 +6,12 @@ Engine logic without browser or network: the `MapEngines` helpers, OSRM
 response → directions conversion (instructions, maneuver icons), Nominatim
 result → place conversion, engine capabilities and map types.
 
+`offline.test.js` covers offline areas with mocked tile server, Cache Storage
+and localStorage: tile arithmetic, the OpenFreeMap limits (3000 tiles, 50 MB,
+4 parallel requests), retries, cancelling, deleting, the search index and its
+ranking, the raster fallback and the drawing rules. Vector tiles are built by
+`mvt.js` and decoded by the bundled protomaps-leaflet.
+
     npm run test:unit
 
 Needs only Node.js 18 or newer (`node --test`).
@@ -45,6 +51,11 @@ run the same test against the running app:
 On LuneOS the position comes from `com.webos.service.location`, which DevTools
 cannot emulate; the test uses whatever fix the device has and skips the
 location checks when there is none.
+
+Offline areas are checked against a mocked OpenFreeMap (puppeteer request
+interception): refusing a too large area, the download, the list in
+Settings, drawing the area and searching it with the network off, and
+deleting it. Nothing is downloaded from the real OpenFreeMap.
 
 The test makes a few dozen requests to the public OpenStreetMap services;
 do not run it in a loop.

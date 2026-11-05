@@ -4,6 +4,9 @@
  *  - search:    Nominatim
  *  - routing:   OSRM (FOSSGIS servers, the ones openstreetmap.org uses)
  *  - elevation: Open-Meteo
+ *  - offline:   areas downloaded from OpenFreeMap (OfflineAreas.js), drawn
+ *               where the tiles do not load and searched when Nominatim
+ *               cannot be reached
  * The service URLs can be overridden through Prefs.osmNominatimUrl,
  * Prefs.osmRoutingUrl, Prefs.osmElevationUrl and Prefs.osmTileUrl.
  *
@@ -22,6 +25,7 @@ MapEngines.register("osm", MapEngines.extend({
 	routeOptions: {provideRouteAlternatives: true},
 	streetView: false,
 	defaultMapType: "OSM",
+	offlineAreas: true,
 
 	nominatimUrl: "https://nominatim.openstreetmap.org",
 	routingUrl: "https://routing.openstreetmap.de",
@@ -116,6 +120,11 @@ MapEngines.register("osm", MapEngines.extend({
 			if (this.targetZoom === this.map.getZoom()) this.targetZoom = null;
 		}, this);
 		this.routeLayer = null;
+		/* the offline areas are drawn below the tiles, and show where those fail */
+		this.map.createPane("offline").style.zIndex = 150;
+		this.offlineLayers = [];
+		this.offlineFallback = new OfflineAreas.Fallback(this.showOffline.bind(this));
+		this.watchBaseLayer();
 		/* Leaflet is usable right away, call back asynchronously like the Google 'idle' event */
 		setTimeout(inOnReady, 0);
 	},
@@ -167,8 +176,43 @@ MapEngines.register("osm", MapEngines.extend({
 	},
 	setMapType: function (inId) {
 		if (this.baseLayer) this.map.removeLayer(this.baseLayer);
-		this.baseLayer = this.tileLayer(String(inId).replace(/_HDPI$/, "")).addTo(this.map);
+		this.baseLayer = this.tileLayer(String(inId).replace(/_HDPI$/, ""));
+		/* before addTo(), which fires the first "loading" */
+		this.watchBaseLayer();
+		this.baseLayer.addTo(this.map);
 		this.baseLayer.bringToBack();
+	},
+	watchBaseLayer: function () {
+		var fallback = this.offlineFallback;
+		var layer = this.baseLayer;
+		if (!fallback || !layer || layer.offlineWatched) return;
+		layer.offlineWatched = true;
+		layer.on("loading", function () { fallback.loading(); });
+		layer.on("tileerror", function (inEvent) { fallback.tileError(inEvent.coords.z, inEvent.coords.x, inEvent.coords.y); });
+		layer.on("load", function () { fallback.load(); });
+	},
+	showOffline: function (inShown) {
+		this.offlineShown = inShown;
+		this.offlineLayers.forEach(function (inLayer) {
+			this.map.removeLayer(inLayer);
+		}, this);
+		this.offlineLayers = [];
+		if (!inShown || !OfflineAreas.list().length) return;
+		OfflineAreas.loadLibrary(function () {
+			/* gone online again, or shown twice, while the library loaded */
+			if (!this.offlineShown || this.offlineLayers.length) return;
+			this.offlineLayers = OfflineAreas.leafletLayers({pane: "offline"});
+			this.offlineLayers.forEach(function (inLayer) {
+				inLayer.addTo(this.map);
+			}, this);
+		}.bind(this));
+	},
+	refreshOffline: function () {
+		if (this.offlineShown) this.showOffline(true);
+	},
+	getViewport: function () {
+		var b = this.map.getBounds();
+		return {south: b.getSouth(), west: b.getWest(), north: b.getNorth(), east: b.getEast()};
 	},
 	setLayer: function (inName, inEnabled) {
 		var layer = this.overlays[inName];
@@ -282,7 +326,7 @@ MapEngines.register("osm", MapEngines.extend({
 		});
 		MapEngines.getJSON(url, function (inError, inData) {
 			if (inError) {
-				inCallback(inError);
+				this.searchOffline(inQuery, inError, inCallback);
 				return;
 			}
 			var places = [];
@@ -291,6 +335,20 @@ MapEngines.register("osm", MapEngines.extend({
 			}
 			inCallback(null, places);
 		}.bind(this));
+	},
+	/* Nominatim could not be reached (or failed): look in the downloaded areas, else report inError */
+	searchOffline: function (inQuery, inError, inCallback) {
+		if (!OfflineAreas.supported() || !OfflineAreas.list().length) {
+			inCallback(inError);
+			return;
+		}
+		OfflineAreas.search(inQuery, this.getCenter(), function (inOfflineError, inPlaces) {
+			if (inOfflineError || !inPlaces.length) {
+				inCallback(inError);
+			} else {
+				inCallback(null, inPlaces);
+			}
+		});
 	},
 	reverseGeocode: function (inLatLng, inCallback) {
 		var url = (Prefs.osmNominatimUrl || this.nominatimUrl) + "/reverse?" + MapEngines.query({

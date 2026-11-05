@@ -340,5 +340,20 @@
 	"{n} feet": "{n} voet",
 	"{n} kilometers": "{n} kilometer",
 	"{n} meters": "{n} meter",
-	"{n} miles": "{n} mijl"
+	"{n} miles": "{n} mijl",
+	"Offline maps": "Offline kaarten",
+	"Downloads the map of the area on the screen from OpenFreeMap, so it shows without a network connection, and search finds the places in it. A download is at most 3000 tiles and 50 MB; for a larger area, choose less detail.": "Downloadt de kaart van het gebied op het scherm van OpenFreeMap, zodat die zonder netwerkverbinding te zien is en zoeken de plaatsen erin vindt. Een download is ten hoogste 3000 tegels en 50 MB; kies voor een groter gebied minder detail.",
+	"Detail": "Detail",
+	"Streets": "Straten",
+	"Towns": "Plaatsen",
+	"Region": "Regio",
+	"Download the area on the map": "Gebied op de kaart downloaden",
+	"No offline areas yet. Move the map to an area, then download it.": "Nog geen offline gebieden. Verschuif de kaart naar een gebied en download het.",
+	"Downloaded {name}": "{name} gedownload",
+	"The area is too large: {count} tiles, at most {max}. Zoom in or choose less detail.": "Het gebied is te groot: {count} tegels, ten hoogste {max}. Zoom in of kies minder detail.",
+	"The area is larger than {max}. Zoom in or choose less detail.": "Het gebied is groter dan {max}. Zoom in of kies minder detail.",
+	"Download failed: {error}": "Downloaden mislukt: {error}",
+	"Downloading: {done} of {total} tiles, {size}": "Downloaden: {done} van {total} tegels, {size}",
+	"Zoom {min} to {max}, {count} tiles, {size}": "Zoom {min} tot {max}, {count} tegels, {size}",
+	"Delete": "Verwijderen"
 }

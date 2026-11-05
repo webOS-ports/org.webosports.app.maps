@@ -340,5 +340,20 @@
 	"{n} feet": "{n} pies",
 	"{n} kilometers": "{n} kilómetros",
 	"{n} meters": "{n} metros",
-	"{n} miles": "{n} millas"
+	"{n} miles": "{n} millas",
+	"Offline maps": "Mapas sin conexión",
+	"Downloads the map of the area on the screen from OpenFreeMap, so it shows without a network connection, and search finds the places in it. A download is at most 3000 tiles and 50 MB; for a larger area, choose less detail.": "Descarga de OpenFreeMap el mapa de la zona en pantalla, para que se vea sin conexión de red y la búsqueda encuentre sus lugares. Una descarga tiene como máximo 3000 teselas y 50 MB; para una zona mayor, elija menos detalle.",
+	"Detail": "Detalle",
+	"Streets": "Calles",
+	"Towns": "Poblaciones",
+	"Region": "Región",
+	"Download the area on the map": "Descargar la zona del mapa",
+	"No offline areas yet. Move the map to an area, then download it.": "Aún no hay zonas sin conexión. Mueva el mapa a una zona y descárguela.",
+	"Downloaded {name}": "{name} descargado",
+	"The area is too large: {count} tiles, at most {max}. Zoom in or choose less detail.": "La zona es demasiado grande: {count} teselas, como máximo {max}. Acerque el mapa o elija menos detalle.",
+	"The area is larger than {max}. Zoom in or choose less detail.": "La zona ocupa más de {max}. Acerque el mapa o elija menos detalle.",
+	"Download failed: {error}": "Error en la descarga: {error}",
+	"Downloading: {done} of {total} tiles, {size}": "Descargando: {done} de {total} teselas, {size}",
+	"Zoom {min} to {max}, {count} tiles, {size}": "Zoom {min} a {max}, {count} teselas, {size}",
+	"Delete": "Eliminar"
 }

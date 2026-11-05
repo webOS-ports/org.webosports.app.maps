@@ -359,5 +359,20 @@
 	"{n} feet": "{n} stop",
 	"{n} kilometers": "{n} km",
 	"{n} meters": "{n} metrů",
-	"{n} miles": "{n} mil"
+	"{n} miles": "{n} mil",
+	"Offline maps": "Offline mapy",
+	"Downloads the map of the area on the screen from OpenFreeMap, so it shows without a network connection, and search finds the places in it. A download is at most 3000 tiles and 50 MB; for a larger area, choose less detail.": "Stáhne z OpenFreeMap mapu oblasti na obrazovce, aby se zobrazila i bez síťového připojení a hledání v ní našlo místa. Jedno stažení má nejvýše 3000 dlaždic a 50 MB; pro větší oblast zvolte méně podrobností.",
+	"Detail": "Podrobnost",
+	"Streets": "Ulice",
+	"Towns": "Obce",
+	"Region": "Region",
+	"Download the area on the map": "Stáhnout oblast na mapě",
+	"No offline areas yet. Move the map to an area, then download it.": "Zatím žádné offline oblasti. Posuňte mapu na oblast a stáhněte ji.",
+	"Downloaded {name}": "{name} staženo",
+	"The area is too large: {count} tiles, at most {max}. Zoom in or choose less detail.": "Oblast je příliš velká: {count} dlaždic, nejvýše {max}. Přibližte mapu nebo zvolte méně podrobností.",
+	"The area is larger than {max}. Zoom in or choose less detail.": "Oblast je větší než {max}. Přibližte mapu nebo zvolte méně podrobností.",
+	"Download failed: {error}": "Stahování selhalo: {error}",
+	"Downloading: {done} of {total} tiles, {size}": "Stahování: {done} z {total} dlaždic, {size}",
+	"Zoom {min} to {max}, {count} tiles, {size}": "Přiblížení {min} až {max}, {count} dlaždic, {size}",
+	"Delete": "Smazat"
 }

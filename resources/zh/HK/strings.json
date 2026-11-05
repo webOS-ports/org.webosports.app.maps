@@ -341,5 +341,20 @@
 	"{n} feet": "{n} 英尺",
 	"{n} kilometers": "{n} 公里",
 	"{n} meters": "{n} 米",
-	"{n} miles": "{n} 英里"
+	"{n} miles": "{n} 英里",
+	"Offline maps": "離線地圖",
+	"Downloads the map of the area on the screen from OpenFreeMap, so it shows without a network connection, and search finds the places in it. A download is at most 3000 tiles and 50 MB; for a larger area, choose less detail.": "從 OpenFreeMap 下載螢幕上區域的地圖，沒有網路連線時也能顯示，搜尋也能找到其中的地點。每次下載最多 3000 個圖塊和 50 MB；區域較大時請選擇較少細節。",
+	"Detail": "細節",
+	"Streets": "街道",
+	"Towns": "城鎮",
+	"Region": "地區",
+	"Download the area on the map": "下載地圖上的區域",
+	"No offline areas yet. Move the map to an area, then download it.": "還沒有離線區域。將地圖移到一個區域，然後下載。",
+	"Downloaded {name}": "已下載 {name}",
+	"The area is too large: {count} tiles, at most {max}. Zoom in or choose less detail.": "區域太大：{count} 個圖塊，最多 {max} 個。請放大或選擇較少細節。",
+	"The area is larger than {max}. Zoom in or choose less detail.": "區域超過 {max}。請放大或選擇較少細節。",
+	"Download failed: {error}": "下載失敗：{error}",
+	"Downloading: {done} of {total} tiles, {size}": "正在下載：{done}/{total} 個圖塊，{size}",
+	"Zoom {min} to {max}, {count} tiles, {size}": "縮放 {min} 至 {max}，{count} 個圖塊，{size}",
+	"Delete": "刪除"
 }

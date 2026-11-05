@@ -339,5 +339,20 @@
 	"{n} feet": "{n} Fuß",
 	"{n} kilometers": "{n} Kilometer",
 	"{n} meters": "{n} Meter",
-	"{n} miles": "{n} Meilen"
+	"{n} miles": "{n} Meilen",
+	"Offline maps": "Offline-Karten",
+	"Downloads the map of the area on the screen from OpenFreeMap, so it shows without a network connection, and search finds the places in it. A download is at most 3000 tiles and 50 MB; for a larger area, choose less detail.": "Lädt die Karte des Gebiets auf dem Bildschirm von OpenFreeMap herunter, damit sie ohne Netzwerkverbindung angezeigt wird und die Suche die Orte darin findet. Ein Download umfasst höchstens 3000 Kacheln und 50 MB; für ein größeres Gebiet weniger Details wählen.",
+	"Detail": "Details",
+	"Streets": "Straßen",
+	"Towns": "Orte",
+	"Region": "Region",
+	"Download the area on the map": "Gebiet auf der Karte herunterladen",
+	"No offline areas yet. Move the map to an area, then download it.": "Noch keine Offline-Gebiete. Die Karte zu einem Gebiet bewegen und es herunterladen.",
+	"Downloaded {name}": "{name} heruntergeladen",
+	"The area is too large: {count} tiles, at most {max}. Zoom in or choose less detail.": "Das Gebiet ist zu groß: {count} Kacheln, höchstens {max}. Hineinzoomen oder weniger Details wählen.",
+	"The area is larger than {max}. Zoom in or choose less detail.": "Das Gebiet ist größer als {max}. Hineinzoomen oder weniger Details wählen.",
+	"Download failed: {error}": "Download fehlgeschlagen: {error}",
+	"Downloading: {done} of {total} tiles, {size}": "Herunterladen: {done} von {total} Kacheln, {size}",
+	"Zoom {min} to {max}, {count} tiles, {size}": "Zoom {min} bis {max}, {count} Kacheln, {size}",
+	"Delete": "Löschen"
 }

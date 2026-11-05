@@ -211,6 +211,28 @@ enyo.kind({
 						{kind: "SettingsItem", label: $L("Offline map tiles"), showing: false, icon: "assets/help.png", help: $L("Keeps the map tiles you have looked at, up to about 50 MB, so those areas still show without a network connection. Nothing is downloaded in advance."), name: "offlineTiles", defaultKind: "onyx.ToggleButton", onChange: "offlineTilesChange", onIconTap: "settingsHelp"},
 						{kind: "SettingsItem", label: $L("Smart caching"), showing: false, icon: "assets/help.png", help: $L("Enables smart caching, tiles are loaded from local storage and every new tile is saved to local storage for future use. Needs restart."), name: "OSMMapCache", defaultKind: "onyx.ToggleButton", onChange: "cacheOSM", onIconTap: "settingsHelp"},
 						{kind: "SettingsItem", label: $L("Use MapTool cache"), showing: false, icon: "assets/help.png", help: $L("If enabled, the map use the MappingTool cache in /media/internal/.MapTool directory"), name: "MapCacheExternal", defaultKind: "onyx.ToggleButton", onChange: "cacheOSM", onIconTap: "settingsHelp"},
+						{kind: "onyx.GroupboxHeader", name: "offlineHeader", showing: false, content: $L("Offline maps")},
+						{name: "offlineAreas", showing: false, components: [
+							{classes: "settings-row", components: [
+								{kind: "Image", src: "assets/help.png", classes: "labeled-item-icon", ontap: "settingsHelp", help: $L("Downloads the map of the area on the screen from OpenFreeMap, so it shows without a network connection, and search finds the places in it. A download is at most 3000 tiles and 50 MB; for a larger area, choose less detail.")},
+								{kind: "Control", content: $L("Detail")},
+								{kind: "onyx.PickerDecorator", classes: "lang-picker", components: [
+									{name: "offlineDetailButton", classes: "lang-picker"},
+									{kind: "onyx.Picker", name: "offlineDetailPicker", classes: "zoom-pre3 lang-picker", onSelect: "offlineDetailChange", components: [
+										{content: $L("Streets"), maxZoom: 14, active: true},
+										{content: $L("Towns"), maxZoom: 12},
+										{content: $L("Region"), maxZoom: 10}
+									]}
+								]}
+							]},
+							{classes: "settings-row offline-actions", components: [
+								{kind: "onyx.Button", name: "offlineDownload", classes: "onyx-affirmative", content: $L("Download the area on the map"), ontap: "offlineDownloadTap"},
+								{kind: "onyx.Button", name: "offlineCancel", classes: "onyx-negative", content: $L("Cancel"), showing: false, ontap: "offlineCancelTap"},
+								{name: "offlineStatus", classes: "settings-notice", showing: false}
+							]},
+							{name: "offlineList"},
+							{name: "offlineEmpty", classes: "settings-row settings-notice", content: $L("No offline areas yet. Move the map to an area, then download it.")}
+						]}
 					]}
 				]},
 				{name: "aboutpanel", kind: "Scroller", touch: true, fixedTime: false, showing: false, classes: "enyo-fit", components: [
@@ -419,6 +441,11 @@ enyo.kind({
 		this.$.offlineTiles.setShowing(mapEngine.id == "osm" && TileCache.supported());
 		this.$.offlineTiles.value = Prefs.offlineTiles;
 		this.$.offlineTiles.inputChanged();
+		this.$.offlineHeader.setShowing(!!mapEngine.offlineAreas && OfflineAreas.supported());
+		this.$.offlineAreas.setShowing(this.$.offlineHeader.showing);
+		this.offlineMaxZoom = OfflineAreas.detailZooms[0];
+		this.$.offlineDetailButton.setContent($L("Streets"));
+		this.renderOfflineAreas();
 		if(enyo.platform.webos) this.$.FullscreenToggle.show();
 		if(enyo.platform.webos) this.$.authorCredits.show();
 		
@@ -591,6 +618,85 @@ enyo.kind({
 	offlineTilesChange: function(inSender, inEvent) {
 		this.doSavePrefs({prefs: {offlineTiles: inSender.getValue()}});
 		TileCache.update();
+	},
+	offlineDetailChange: function(inSender, inEvent) {
+		this.$.offlineDetailButton.setContent(inEvent.selected.content);
+		this.offlineMaxZoom = inEvent.selected.maxZoom;
+	},
+	offlineSize: function(inBytes) {
+		return (inBytes / (1024 * 1024)).toFixed(1) + " MB";
+	},
+	offlineStatus: function(inText) {
+		this.$.offlineStatus.setContent(inText || "");
+		this.$.offlineStatus.setShowing(!!inText);
+	},
+	offlineDownloadTap: function() {
+		if (this.offlineDownloadHandle) return;
+		var self = this;
+		var finished = function(inError, inArea) {
+			self.offlineDownloadHandle = null;
+			self.$.offlineDownload.setDisabled(false);
+			self.$.offlineCancel.hide();
+			if (!inError) {
+				self.offlineStatus($LF("Downloaded {name}", {name: inArea.name}));
+				self.renderOfflineAreas();
+				mapEngine.refreshOffline();
+			} else if (inError.tooMany) {
+				self.offlineStatus($LF("The area is too large: {count} tiles, at most {max}. Zoom in or choose less detail.", {count: inError.tooMany, max: OfflineAreas.maxTiles}));
+			} else if (inError.tooLarge) {
+				self.offlineStatus($LF("The area is larger than {max}. Zoom in or choose less detail.", {max: self.offlineSize(OfflineAreas.maxBytes)}));
+			} else if (inError.cancelled) {
+				self.offlineStatus("");
+			} else {
+				self.offlineStatus($LF("Download failed: {error}", {error: inError.message}));
+			}
+		};
+		var handle = OfflineAreas.download({bounds: mapEngine.getViewport(), maxZoom: this.offlineMaxZoom}, function(inProgress) {
+			self.offlineStatus($LF("Downloading: {done} of {total} tiles, {size}", {done: inProgress.done, total: inProgress.total, size: self.offlineSize(inProgress.bytes)}));
+		}, finished);
+		if (handle) {
+			this.offlineDownloadHandle = handle;
+			this.$.offlineDownload.setDisabled(true);
+			this.$.offlineCancel.show();
+			this.offlineStatus($LF("Downloading: {done} of {total} tiles, {size}", {done: 0, total: OfflineAreas.countTiles(OfflineAreas.clampBounds(mapEngine.getViewport()), OfflineAreas.minZoom, this.offlineMaxZoom), size: this.offlineSize(0)}));
+		}
+	},
+	offlineCancelTap: function() {
+		if (this.offlineDownloadHandle) this.offlineDownloadHandle.cancel();
+	},
+	/* one row per downloaded area: name, what it holds, Show and Delete */
+	renderOfflineAreas: function() {
+		this.$.offlineList.destroyClientControls();
+		var areas = OfflineAreas.supported() ? OfflineAreas.list() : [];
+		for (var i = 0; i < areas.length; i++) {
+			var area = areas[i];
+			this.$.offlineList.createComponent({classes: "settings-row offline-area", components: [
+				{classes: "offline-area-text", components: [
+					{classes: "offline-area-name", content: area.name},
+					{classes: "settings-notice", content: $LF("Zoom {min} to {max}, {count} tiles, {size}", {min: area.minZoom, max: area.maxZoom, count: area.tiles, size: this.offlineSize(area.size)}) + ", " + area.created}
+				]},
+				{kind: "onyx.Button", content: $L("Show"), areaId: area.id, ontap: "offlineShowTap"},
+				{kind: "onyx.Button", classes: "onyx-negative", content: $L("Delete"), areaId: area.id, ontap: "offlineDeleteTap"}
+			]}, {owner: this});
+		}
+		this.$.offlineEmpty.setShowing(!areas.length);
+		this.$.offlineList.render();
+	},
+	offlineShowTap: function(inSender) {
+		var areas = OfflineAreas.list();
+		for (var i = 0; i < areas.length; i++) {
+			if (areas[i].id == inSender.areaId) {
+				mapEngine.fitViewport(areas[i].bounds);
+				this.closePullout();
+				return;
+			}
+		}
+	},
+	offlineDeleteTap: function(inSender) {
+		OfflineAreas.remove(inSender.areaId, function() {
+			this.renderOfflineAreas();
+			mapEngine.refreshOffline();
+		}.bind(this));
 	},
 	cacheOSM: function(inSender, inEvent) {
 		this.doCacheOSM({value: inSender.getValue(), property: inSender.name});

@@ -323,5 +323,20 @@
 	"{n} feet": "{n} pieds",
 	"{n} kilometers": "{n} kilomètres",
 	"{n} meters": "{n} mètres",
-	"{n} miles": "{n} miles"
+	"{n} miles": "{n} miles",
+	"Offline maps": "Cartes hors ligne",
+	"Downloads the map of the area on the screen from OpenFreeMap, so it shows without a network connection, and search finds the places in it. A download is at most 3000 tiles and 50 MB; for a larger area, choose less detail.": "Télécharge depuis OpenFreeMap la carte de la zone affichée, pour qu'elle s'affiche sans connexion réseau et que la recherche trouve les lieux qu'elle contient. Un téléchargement fait au plus 3000 tuiles et 50 Mo ; pour une zone plus grande, choisissez moins de détails.",
+	"Detail": "Détail",
+	"Streets": "Rues",
+	"Towns": "Villes",
+	"Region": "Région",
+	"Download the area on the map": "Télécharger la zone de la carte",
+	"No offline areas yet. Move the map to an area, then download it.": "Aucune zone hors ligne. Déplacez la carte vers une zone, puis téléchargez-la.",
+	"Downloaded {name}": "{name} téléchargé",
+	"The area is too large: {count} tiles, at most {max}. Zoom in or choose less detail.": "La zone est trop grande : {count} tuiles, au plus {max}. Zoomez ou choisissez moins de détails.",
+	"The area is larger than {max}. Zoom in or choose less detail.": "La zone dépasse {max}. Zoomez ou choisissez moins de détails.",
+	"Download failed: {error}": "Échec du téléchargement : {error}",
+	"Downloading: {done} of {total} tiles, {size}": "Téléchargement : {done} sur {total} tuiles, {size}",
+	"Zoom {min} to {max}, {count} tiles, {size}": "Zoom {min} à {max}, {count} tuiles, {size}",
+	"Delete": "Supprimer"
 }

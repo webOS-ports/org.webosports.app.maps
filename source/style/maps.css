@@ -887,3 +887,36 @@ background-size: 100% 3600%;
 	margin: 6px auto;
 	width: 90%;
 }
+
+/* Settings > Offline maps: the download button with its progress, then a row per area */
+.settings .offline-actions > .onyx-button {
+	flex: 1;
+	margin: 6px 0 0 0;
+}
+
+.settings .offline-actions > .onyx-button + .onyx-button {
+	margin-left: 8px;
+}
+
+.settings .offline-area {
+	padding-top: 6px;
+	flex-wrap: nowrap;
+}
+
+.settings .offline-area > .offline-area-text {
+	flex: 1;
+	min-width: 0;
+	line-height: 18px;
+}
+
+.settings .offline-area .offline-area-name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.settings .offline-area > .onyx-button {
+	flex: none;
+	margin-left: 6px;
+	padding: 4px 8px;
+}

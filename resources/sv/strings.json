@@ -356,5 +356,20 @@
 	"{n} feet": "{n} fot",
 	"{n} kilometers": "{n} kilometer",
 	"{n} meters": "{n} meter",
-	"{n} miles": "{n} miles"
+	"{n} miles": "{n} miles",
+	"Offline maps": "Offlinekartor",
+	"Downloads the map of the area on the screen from OpenFreeMap, so it shows without a network connection, and search finds the places in it. A download is at most 3000 tiles and 50 MB; for a larger area, choose less detail.": "Hämtar kartan över området på skärmen från OpenFreeMap, så att den visas utan nätverksanslutning och sökningen hittar platserna i den. En hämtning är högst 3000 rutor och 50 MB; välj mindre detaljer för ett större område.",
+	"Detail": "Detaljer",
+	"Streets": "Gator",
+	"Towns": "Orter",
+	"Region": "Region",
+	"Download the area on the map": "Hämta området på kartan",
+	"No offline areas yet. Move the map to an area, then download it.": "Inga offlineområden än. Flytta kartan till ett område och hämta det.",
+	"Downloaded {name}": "{name} hämtat",
+	"The area is too large: {count} tiles, at most {max}. Zoom in or choose less detail.": "Området är för stort: {count} rutor, högst {max}. Zooma in eller välj mindre detaljer.",
+	"The area is larger than {max}. Zoom in or choose less detail.": "Området är större än {max}. Zooma in eller välj mindre detaljer.",
+	"Download failed: {error}": "Hämtningen misslyckades: {error}",
+	"Downloading: {done} of {total} tiles, {size}": "Hämtar: {done} av {total} rutor, {size}",
+	"Zoom {min} to {max}, {count} tiles, {size}": "Zoom {min} till {max}, {count} rutor, {size}",
+	"Delete": "Ta bort"
 }

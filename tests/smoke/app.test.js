@@ -475,6 +475,101 @@ async function waitFor(page, fn, timeout = 20000, arg) {
 		check('osm: offline tiles on registers the worker again', await waitFor(page, `navigator.serviceWorker.getRegistrations().then(function(r){ return r.length == 1; })`, 10000));
 	}
 
+	// offline areas, against a mocked OpenFreeMap: nothing is downloaded from the real one
+	if (await page.evaluate(`OfflineAreas.supported() && ${mainView}.$.pullout.$.offlineAreas.showing`)) {
+		const {encodeTile} = require('../unit/mvt');
+		const fixture = Buffer.from(encodeTile({
+			water: [{type: 'polygon', path: [[0, 0], [1200, 0], [1200, 4096], [0, 4096]], props: {class: 'lake'}}],
+			transportation: [{type: 'line', path: [[0, 2048], [4096, 2100]], props: {class: 'primary'}}],
+			place: [{type: 'point', at: [2600, 2600], props: {name: 'Smoketown', class: 'town'}}]
+		}));
+		const mock = {tileJson: 0, tiles: 0, running: 0, maxRunning: 0, other: []};
+		const onRequest = (r) => {
+			const url = r.url();
+			if (!/^https:\/\/tiles\.openfreemap\.org\//.test(url)) { r.continue(); return; }
+			if (url == 'https://tiles.openfreemap.org/planet') {
+				mock.tileJson++;
+				r.respond({status: 200, contentType: 'application/json', headers: {'Access-Control-Allow-Origin': '*'}, body: JSON.stringify({tiles: ['https://tiles.openfreemap.org/planet/smoke/{z}/{x}/{y}.pbf'], maxzoom: 14})});
+			} else if (/^https:\/\/tiles\.openfreemap\.org\/planet\/smoke\/\d+\/\d+\/\d+\.pbf$/.test(url)) {
+				mock.tiles++;
+				mock.running++;
+				mock.maxRunning = Math.max(mock.maxRunning, mock.running);
+				setTimeout(() => {
+					mock.running--;
+					r.respond({status: 200, contentType: 'application/vnd.mapbox-vector-tile', headers: {'Access-Control-Allow-Origin': '*'}, body: fixture}).catch(() => {});
+				}, 30);
+			} else {
+				mock.other.push(url);
+				r.abort();
+			}
+		};
+		await page.setBypassServiceWorker(true);
+		await page.setRequestInterception(true);
+		page.on('request', onRequest);
+		const pullout = `${mainView}.$.pullout`;
+		await page.evaluate(`${pullout}.toggle("settingspanel"); mapEngine.setMapType("OSM"); mapEngine.setCenter(mapEngine.latLng(52.0907, 5.1214)); mapEngine.setZoom(9);`);
+		await waitFor(page, `mapEngine.map.getZoom() == 9`, 5000);
+		await sleep(500);
+		await page.evaluate(`${pullout}.offlineDownloadTap()`);
+		check('offline: an area over 3000 tiles is refused without a request', await page.evaluate(`/too large/.test(${pullout}.$.offlineStatus.content) && !${pullout}.offlineDownloadHandle`) && mock.tiles + mock.tileJson === 0,
+			await page.evaluate(`${pullout}.$.offlineStatus.content`));
+		await page.evaluate(`mapEngine.setZoom(15);`);
+		await waitFor(page, `mapEngine.map.getZoom() == 15`, 5000);
+		await sleep(500);
+		const expected = await page.evaluate(`OfflineAreas.countTiles(OfflineAreas.clampBounds(mapEngine.getViewport()), OfflineAreas.minZoom, 14)`);
+		await page.evaluate(`${pullout}.offlineDownloadTap()`);
+		const downloaded = await waitFor(page, `!${pullout}.offlineDownloadHandle && OfflineAreas.list().length == 1`, 60000);
+		check('offline: the area on the map is downloaded', downloaded, {status: await page.evaluate(`${pullout}.$.offlineStatus.content`), expected, mock});
+		check('offline: every tile once, at most 4 at a time', mock.tiles === expected && mock.maxRunning <= 4 && mock.maxRunning > 1 && mock.other.length === 0, mock);
+		check('offline: the area is listed in Settings', await page.evaluate(`${pullout}.$.offlineList.getClientControls().length == 1 && !${pullout}.$.offlineEmpty.showing && /Smoketown/.test(${pullout}.$.offlineList.hasNode().textContent)`),
+			await page.evaluate(`${pullout}.$.offlineList.hasNode() && ${pullout}.$.offlineList.hasNode().textContent`));
+		await page.evaluate(`${pullout}.$.settingspanel.scrollToBottom()`);
+		await sleep(300);
+		await shot(page, '/osm-11-offline-areas.png');
+		page.off('request', onRequest);
+		await page.setRequestInterception(false);
+		await page.setBypassServiceWorker(false);
+		await page.evaluate(`${pullout}.closePullout()`);
+
+		// without a network the area is drawn from the download, in the gaps the tiles leave
+		const sessions = [await page.createCDPSession()];
+		const worker = browser.targets().find((t) => t.type() === 'service_worker');
+		if (worker) sessions.push(await worker.createCDPSession());
+		const network = async (on) => {
+			for (const cdpSession of sessions) {
+				await cdpSession.send('Network.enable');
+				await cdpSession.send('Network.setCacheDisabled', {cacheDisabled: !on});
+				await cdpSession.send('Network.emulateNetworkConditions', on ?
+					{offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1} :
+					{offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0});
+			}
+		};
+		await network(false);
+		await page.evaluate(`caches["delete"]("tiles-v1")`);
+		await page.evaluate(`mapEngine.setMapType("TOPO"); mapEngine.setMapType("OSM"); mapEngine.setZoom(16);`);
+		const drawn = `(function(){ var n = 0; document.querySelectorAll('.leaflet-offline-pane canvas').forEach(function(c){ var d = c.getContext('2d').getImageData(c.width / 2, c.height / 2, 1, 1).data; if (d[3] > 0) n++; }); return n; })()`;
+		check('offline: the downloaded area is drawn without a network', await waitFor(page, `mapEngine.offlineShown && mapEngine.offlineLayers.length == 1 && ${drawn} > 0`, 15000),
+			await page.evaluate(`({shown: mapEngine.offlineShown, layers: mapEngine.offlineLayers.length, drawn: ${drawn}})`));
+		check('offline: the OpenFreeMap attribution is shown with it', await page.evaluate(`/OpenFreeMap/.test(document.querySelector('.leaflet-control-attribution').textContent)`));
+		await shot(page, '/osm-12-offline-area.png');
+		await page.evaluate(`${mainView}.clearMap()`);
+		await page.click('#' + await page.evaluate(`${mainView}.$.searchLocation.id`));
+		await sleep(500);
+		await page.keyboard.type('smoketown');
+		await page.keyboard.press('Enter');
+		check('offline: search finds the names of the area', await waitFor(page, `markers.some(function(m){ return m.place && m.place.name == "Smoketown" && m.place.offline; })`, 10000),
+			await page.evaluate(`markers.map(function(m){ return String(m.place.name); })`));
+		await page.evaluate(`${mainView}.$.pullout.closePullout(); ${mainView}.clearMap();`);
+		await network(true);
+		await page.evaluate(`mapEngine.setMapType("TOPO"); mapEngine.setMapType("OSM");`);
+		check('offline: online again the tiles take over', await waitFor(page, `!mapEngine.offlineShown && mapEngine.offlineLayers.length == 0`, 20000));
+		errors.splice(0);  // the offline part fails requests on purpose
+
+		const id = await page.evaluate(`OfflineAreas.list()[0].id`);
+		await page.evaluate(`(function(p){ var row = p.$.offlineList.getClientControls()[0]; var del = row.getClientControls().filter(function(c){ return c.ontap == "offlineDeleteTap"; })[0]; p.offlineDeleteTap(del); })(${pullout})`);
+		check('offline: Delete removes the area and its tiles', await waitFor(page, `OfflineAreas.list().length == 0 && ${pullout}.$.offlineEmpty.showing ? caches.has("offline-area-${id}").then(function(h){ return !h; }) : false`, 10000));
+	}
+
 	check('osm: tile servers deliver real tiles (no policy block)', tiles.ok > 0 && tiles.bad.length === 0, {ok: tiles.ok, bad: tiles.bad.slice(0, 5)});
 	const osmErrors = errors.splice(0);
 	check('osm: no page/console errors', osmErrors.length === 0, osmErrors);

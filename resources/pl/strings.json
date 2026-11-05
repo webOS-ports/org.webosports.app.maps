@@ -279,5 +279,21 @@
 	"{n} feet": "{n} stóp",
 	"{n} kilometers": "{n} km",
 	"{n} meters": "{n} metrów",
-	"{n} miles": "{n} mil"
+	"{n} miles": "{n} mil",
+	"Offline maps": "Mapy offline",
+	"Downloads the map of the area on the screen from OpenFreeMap, so it shows without a network connection, and search finds the places in it. A download is at most 3000 tiles and 50 MB; for a larger area, choose less detail.": "Pobiera z OpenFreeMap mapę obszaru widocznego na ekranie, aby była widoczna bez połączenia z siecią, a wyszukiwanie znajdowało miejsca na niej. Jedno pobranie to najwyżej 3000 kafelków i 50 MB; dla większego obszaru wybierz mniej szczegółów.",
+	"Detail": "Szczegóły",
+	"Streets": "Ulice",
+	"Towns": "Miejscowości",
+	"Region": "Region",
+	"Download the area on the map": "Pobierz obszar z mapy",
+	"No offline areas yet. Move the map to an area, then download it.": "Brak obszarów offline. Przesuń mapę na obszar, a potem go pobierz.",
+	"Downloaded {name}": "Pobrano {name}",
+	"The area is too large: {count} tiles, at most {max}. Zoom in or choose less detail.": "Obszar jest za duży: {count} kafelków, najwyżej {max}. Przybliż mapę lub wybierz mniej szczegółów.",
+	"The area is larger than {max}. Zoom in or choose less detail.": "Obszar przekracza {max}. Przybliż mapę lub wybierz mniej szczegółów.",
+	"Download failed: {error}": "Pobieranie nie powiodło się: {error}",
+	"Downloading: {done} of {total} tiles, {size}": "Pobieranie: {done} z {total} kafelków, {size}",
+	"Zoom {min} to {max}, {count} tiles, {size}": "Powiększenie {min}–{max}, {count} kafelków, {size}",
+	"Delete": "Usuń",
+	"Show": "Pokaż"
 }

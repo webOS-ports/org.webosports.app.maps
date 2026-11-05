@@ -181,6 +181,8 @@ MapEngines.Base.prototype = {
 	routeOptions: {},
 	streetView: false,
 	defaultMapType: "",
+	/* areas can be downloaded for use without a network (source/engines/OfflineAreas.js) */
+	offlineAreas: false,
 
 	/* loads the API, calls inCallback once usable */
 	loadApi: function (inCallback) { inCallback(); },
@@ -207,6 +209,8 @@ MapEngines.Base.prototype = {
 	getZoom: function () {},
 	setZoom: function (inZoom) {},
 	fitLatLngs: function (inLatLngs) {},
+	/* the visible area: {south, west, north, east} */
+	getViewport: function () {},
 	/* viewport as produced by this engine for place.geometry.viewport */
 	fitViewport: function (inViewport) {},
 	setMapType: function (inId) {},
@@ -243,6 +247,8 @@ MapEngines.Base.prototype = {
 	/* draws route inIndex of inResponse; inOptions: {fit: fit the view to it, padRight: pixels covered on the right (the directions panel), onSelect(index): the user picked another route on the map} */
 	showRoute: function (inResponse, inIndex, inOptions) {},
 	clearRoute: function () {},
+	/* the offline areas changed (one was downloaded or deleted) */
+	refreshOffline: function () {},
 	/* inCallback(error, meters) */
 	elevation: function (inLatLng, inCallback) { inCallback("Not supported"); },
 	/* inCallback(url) when there is a picture for the place, never called otherwise */
