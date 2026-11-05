@@ -23,4 +23,7 @@ trap 'kill $SERVER' EXIT
 sleep 1
 
 [ -n "$1" ] && mkdir -p "$1"
-node "$ROOT/tests/smoke/app.test.js" "http://127.0.0.1:$PORT/index.html" $1
+status=0
+node "$ROOT/tests/smoke/touch.test.js" "http://127.0.0.1:$PORT/index.html" || status=$?
+node "$ROOT/tests/smoke/app.test.js" "http://127.0.0.1:$PORT/index.html" $1 || status=$?
+exit $status

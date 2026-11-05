@@ -271,7 +271,34 @@ init: function(){
 		center: mapEngine.latLng(Prefs.lastPosLat, Prefs.lastPosLng),
 		mapType: Prefs.mapType
 	}, this.initAfterIdle.bind(this));
+	this.watchMultiTouch(this.$.mapdiv.hasNode());
 	
+},
+/*
+ * Enyo's hold follows the first finger only, so a pinch could drop a pin:
+ * the first finger stays put, or lifting one finger reaches the page as a new
+ * one-finger touch on the one left. A hold does not drop a pin while more
+ * than one finger is down, for a second after that, or when the map zoomed
+ * during the touch.
+ */
+holdQuietMs: 1000,
+watchMultiTouch: function (inNode) {
+	var self = this;
+	var update = function (inEvent) {
+		var now = Date.now();
+		if (inEvent.touches.length > 1 || (inEvent.type == "touchend" && inEvent.touches.length + inEvent.changedTouches.length > 1)) {
+			self.lastMultiTouch = now;
+		}
+		if (inEvent.type == "touchstart" && inEvent.touches.length == 1) self.touchZoom = mapEngine.getZoom();
+	};
+	["touchstart", "touchmove", "touchend", "touchcancel"].forEach(function (inType) {
+		inNode.addEventListener(inType, update, {capture: true, passive: true});
+	});
+},
+holdAllowed: function () {
+	if (this.lastMultiTouch && Date.now() - this.lastMultiTouch < this.holdQuietMs) return false;
+	if (this.touchZoom !== undefined && mapEngine.getZoom() != this.touchZoom) return false;
+	return true;
 },
 initAfterIdle: function() {
 
@@ -1753,6 +1780,7 @@ updateDirections: function (inSender, inEvent) {
 
 mapTapHold: function (inSender, inEvent) {
 	
+	if (!this.holdAllowed()) return;
 	this.statusPanel("Dropping a pin ...", 10);
 
 	/* position of the hold relative to the map container */
