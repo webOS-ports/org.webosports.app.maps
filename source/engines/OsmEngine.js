@@ -57,10 +57,10 @@ MapEngines.register("osm", MapEngines.extend({
 			{id: "CYCLOSM", label: $L("CyclOSM"), isRetina: false, icon: "assets/map-type-ocm.png"}
 		];
 	},
-	/* tiles are requested with CORS so the offline cache (sw.js) gets responses it can check and keep */
+	/* the tiles looked at are kept for use without a network (TileStore); they are read with CORS */
 	tiles: function (inUrl, inOptions) {
 		inOptions.crossOrigin = true;
-		return L.tileLayer(inUrl, inOptions);
+		return new (TileStore.layerClass())(inUrl, inOptions);
 	},
 	tileLayer: function (inId) {
 		var attribution = this.osmAttribution;

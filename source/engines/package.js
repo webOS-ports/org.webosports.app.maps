@@ -2,6 +2,7 @@ enyo.depends(
 	"MapEngine.js",
 	"OfflineAreas.js",
 	"OfflineStyle.js",
+	"TileStore.js",
 	"OsmEngine.js",
 	"GoogleEngine.js",
 	"setup.js"

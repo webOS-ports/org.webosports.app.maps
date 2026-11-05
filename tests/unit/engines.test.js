@@ -287,9 +287,9 @@ test('unsupported travel mode is reported, not sent', () => {
 });
 
 test('offline tile cache only takes tile requests of the offered servers', () => {
-	const context = {self: {addEventListener: () => {}}, caches: {}, fetch: () => {}, Response: function () {}};
+	const context = {fetch: () => {}};
 	vm.createContext(context);
-	vm.runInContext(fs.readFileSync(path.join(root, 'sw.js'), 'utf8'), context, {filename: 'sw.js'});
+	vm.runInContext(fs.readFileSync(path.join(root, 'source/engines/TileStore.js'), 'utf8') + '\nglobalThis.isTile = TileStore.isTile.bind(TileStore);', context, {filename: 'TileStore.js'});
 	for (const url of [
 		'https://tile.openstreetmap.org/15/16848/10768.png',
 		'https://a.tile.openstreetmap.fr/hot/15/16848/10768.png',

@@ -431,28 +431,22 @@ async function waitFor(page, fn, timeout = 20000, arg) {
 	// offline tiles: what was looked at shows again without a network, nothing else
 	if (await page.evaluate(`TileCache.supported()`)) {
 		const shownTiles = `(function(){ var ok = 0, broken = 0; document.querySelectorAll('.leaflet-tile-pane img.leaflet-tile').forEach(function(i){ (i.complete && i.naturalWidth > 0) ? ok++ : broken++; }); return {ok: ok, broken: broken}; })()`;
-		const cachedCount = `caches.open("tiles-v1").then(function(c){ return c.keys(); }).then(function(k){ return k.length; })`;
-		await page.reload({waitUntil: 'load'});
-		check('osm: offline tile worker controls the app', await waitFor(page, `window.mapEngine && mapEngine.map && navigator.serviceWorker.controller`, 20000));
-		await page.evaluate(`caches["delete"]("tiles-v1")`);
+		check('osm: no service worker is registered', await page.evaluate(`navigator.serviceWorker ? navigator.serviceWorker.getRegistrations().then(function(r){ return r.length === 0; }) : true`));
+		await page.evaluate(`TileStore.clear()`);
 		await page.evaluate(`${mainView}.$.markerPopup.hide(); ${mainView}.$.pullout.closePullout(); mapEngine.setMapType("OSM"); mapEngine.setCenter(mapEngine.latLng(52.0907, 5.1214)); mapEngine.setZoom(15);`);
 		await sleep(7000);
-		const kept = await page.evaluate(cachedCount);
+		const kept = await page.evaluate(`TileStore.count()`);
 		check('osm: viewed tiles are kept', kept > 0, kept);
 
-		const sessions = [await page.createCDPSession()];
-		const worker = browser.targets().find((t) => t.type() === 'service_worker');
-		if (worker) sessions.push(await worker.createCDPSession());
+		const cdpSession = await page.createCDPSession();
 		const offline = async (on) => {
-			for (const cdpSession of sessions) {
-				await cdpSession.send('Network.enable');
-				await cdpSession.send('Network.setCacheDisabled', {cacheDisabled: on});
-				await cdpSession.send('Network.emulateNetworkConditions', on ?
-					{offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0} :
-					{offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1});
-			}
+			await cdpSession.send('Network.enable');
+			await cdpSession.send('Network.setCacheDisabled', {cacheDisabled: on});
+			await cdpSession.send('Network.emulateNetworkConditions', on ?
+				{offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0} :
+				{offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1});
 		};
-		// offline with every HTTP cache off: a fresh base layer can only get tiles from the worker
+		// offline with the HTTP cache off: a fresh base layer can only get tiles from the kept ones
 		await offline(true);
 		await page.evaluate(`mapEngine.setMapType("TOPO"); mapEngine.setMapType("OSM");`);
 		await sleep(5000);
@@ -466,13 +460,16 @@ async function waitFor(page, fn, timeout = 20000, arg) {
 		await offline(false);
 		errors.splice(0);  // the offline part fails requests on purpose
 
-		// turning the setting off removes the worker and the tiles
+		// turning the setting off forgets the kept tiles and keeps no new ones
 		await page.evaluate(`(function(p){ p.$.offlineTiles.$.input.setValue(false); p.offlineTilesChange(p.$.offlineTiles); })(${mainView}.$.pullout)`);
-		check('osm: offline tiles off removes worker and cache', await waitFor(page,
-			`navigator.serviceWorker.getRegistrations().then(function(r){ return r.length == 0; }).then(function(none){ return none ? caches.has("tiles-v1").then(function(h){ return !h; }) : false; })`, 10000));
+		check('osm: offline tiles off forgets the kept tiles', await waitFor(page, `TileStore.count().then(function(n){ return n === 0; })`, 10000));
 		check('osm: offline tiles preference stored', await page.evaluate(`JSON.parse(localStorage.getItem("mapsAppPrefs")).offlineTiles`) === false);
+		await page.evaluate(`mapEngine.setCenter(mapEngine.latLng(52.0907, 5.1214)); mapEngine.setMapType("TOPO"); mapEngine.setMapType("OSM");`);
+		await sleep(4000);
+		check('osm: offline tiles off keeps nothing', await page.evaluate(`TileStore.count()`) === 0);
 		await page.evaluate(`(function(p){ p.$.offlineTiles.$.input.setValue(true); p.offlineTilesChange(p.$.offlineTiles); })(${mainView}.$.pullout)`);
-		check('osm: offline tiles on registers the worker again', await waitFor(page, `navigator.serviceWorker.getRegistrations().then(function(r){ return r.length == 1; })`, 10000));
+		await page.evaluate(`mapEngine.setMapType("TOPO"); mapEngine.setMapType("OSM");`);
+		check('osm: offline tiles on keeps tiles again', await waitFor(page, `TileStore.count().then(function(n){ return n > 0; })`, 10000));
 	}
 
 	// offline areas, against a mocked OpenFreeMap: nothing is downloaded from the real one

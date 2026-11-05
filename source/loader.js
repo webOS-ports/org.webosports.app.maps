@@ -86,32 +86,28 @@ if (storedPrefs) {
 var currentPos;
 
 /*
- * Offline map tiles (sw.js): the tiles the user has looked at stay available
- * without a network. Only for the OpenStreetMap engine; turning the
- * preference off removes the worker and the tiles it kept.
+ * Offline map tiles (TileStore): the tiles the user has looked at stay
+ * available without a network. Only for the OpenStreetMap engine; turning
+ * the preference off forgets the tiles kept.
  */
 var TileCache = {
-	name: "tiles-v1",
 	supported: function () {
-		return ("serviceWorker" in navigator) && ("caches" in window);
+		return TileStore.supported();
 	},
 	update: function () {
-		if (!this.supported()) {
-			return;
-		}
-		if (Prefs.offlineTiles && mapEngine.id == "osm") {
-			navigator.serviceWorker.register("sw.js").then(function (inRegistration) {
-				enyo.log("Offline tiles kept by ", inRegistration.scope);
-			}, function (inError) {
-				enyo.log("Offline tiles unavailable: ", inError);
-			});
-		} else {
+		/* the service worker that kept tiles before, and its cache, are no longer used */
+		if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
 			navigator.serviceWorker.getRegistrations().then(function (inRegistrations) {
 				inRegistrations.forEach(function (inRegistration) {
 					inRegistration.unregister();
 				});
-			});
-			window.caches["delete"](this.name);
+			}, function () {});
+		}
+		if (typeof caches != "undefined" && caches) {
+			caches["delete"]("tiles-v1")["catch"](function () {});
+		}
+		if (this.supported() && !Prefs.offlineTiles) {
+			TileStore.clear();
 		}
 	}
 };
