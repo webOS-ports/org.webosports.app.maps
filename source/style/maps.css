@@ -245,8 +245,13 @@
 	font-size: 12px;
 	padding: 2px;
 	position: absolute;
-	bottom: 1px;
+	/* Above the map's attribution line (Leaflet's bottom controls), which a
+	   message lasting up to 10s ("Location error", "Dropping a pin") hid,
+	   its OpenStreetMap link with it. */
+	bottom: 20px;
 	left: 50px;
+	/* Only a message: a tap goes to the map under it. */
+	pointer-events: none;
 	text-align: center;
 	right: 50px;
     margin: auto;
